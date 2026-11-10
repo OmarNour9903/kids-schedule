@@ -89,6 +89,57 @@ export function confirmDialog({ title, message, confirmText = "تأكيد", dang
   });
 }
 
+// رسالة فيها أكتر من اختيار. بترجع value بتاع الاختيار، أو null لو رجع
+let choiceEl = null;
+
+function ensureChoiceModal() {
+  if (choiceEl) return;
+  choiceEl = document.createElement("div");
+  choiceEl.className = "modal fade";
+  choiceEl.tabIndex = -1;
+  choiceEl.setAttribute("aria-hidden", "true");
+  choiceEl.innerHTML = `
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h5" data-choice-title></h2>
+          <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+        </div>
+        <div class="modal-body" data-choice-body></div>
+        <div class="modal-footer flex-column align-items-stretch gap-2" data-choice-buttons></div>
+      </div>
+    </div>`;
+  document.body.appendChild(choiceEl);
+}
+
+export function choiceDialog({ title, message, choices }) {
+  ensureChoiceModal();
+  choiceEl.querySelector("[data-choice-title]").textContent = title;
+  choiceEl.querySelector("[data-choice-body]").textContent = message;
+  const buttons = choiceEl.querySelector("[data-choice-buttons]");
+  buttons.innerHTML = "";
+
+  return new Promise((resolve) => {
+    const modal = bootstrap.Modal.getOrCreateInstance(choiceEl);
+    let picked = null;
+
+    [...choices, { label: "رجوع", value: null, style: "btn-outline-secondary" }].forEach((choice) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `btn ${choice.style || "btn-primary"}`;
+      btn.textContent = choice.label;
+      btn.addEventListener("click", () => {
+        picked = choice.value;
+        modal.hide();
+      });
+      buttons.appendChild(btn);
+    });
+
+    choiceEl.addEventListener("hidden.bs.modal", () => resolve(picked), { once: true });
+    modal.show();
+  });
+}
+
 // إظهار محتوى الصفحة بعد ما بيانات الجلسة تحمل
 export function revealPage() {
   document.getElementById("page-loader")?.classList.add("d-none");

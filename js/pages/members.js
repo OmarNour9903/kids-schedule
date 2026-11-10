@@ -1,12 +1,14 @@
 // إدارة الأعضاء: المالك يدعي ويغير الأدوار ويوقف/يفعّل،
 // وولي الأمر يوقف/يفعّل السواقين بس
 import {
-  db, doc, collection, setDoc, updateDoc, deleteDoc,
+  db, doc, collection, setDoc, updateDoc, deleteDoc, writeBatch,
   query, where, onSnapshot, serverTimestamp, Timestamp
 } from "../firebase.js";
 import { requireSession } from "../session.js";
 import { renderNav } from "../nav.js";
-import { escapeHtml, showAlert, hideAlert, setLoading, confirmDialog, formatDate, revealPage } from "../ui.js";
+import {
+  escapeHtml, showAlert, hideAlert, setLoading, confirmDialog, choiceDialog, formatDate, revealPage
+} from "../ui.js";
 import { ROLE_LABELS, STATUS_LABELS, INVITABLE_ROLES, INVITE_DAYS_VALID, errorMessage } from "../strings.js";
 
 const session = await requireSession({ roles: ["owner", "parent"] });
@@ -17,6 +19,7 @@ const isOwner = me.role === "owner";
 
 const membersList = document.getElementById("members-list");
 const membersAlert = document.getElementById("members-alert");
+const driversWarning = document.getElementById("drivers-warning");
 const inviteSection = document.getElementById("invite-section");
 const inviteForm = document.getElementById("invite-form");
 const inviteSubmit = document.getElementById("invite-submit");
@@ -82,7 +85,69 @@ onSnapshot(collection(db, "families", familyId, "members"), (snapshot) => {
   members.sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role] || a.name.localeCompare(b.name, "ar"));
   membersById = new Map(members.map((m) => [m.id, m]));
   membersList.innerHTML = members.map(memberItemHtml).join("");
+  renderDriversWarning();
 }, (error) => showAlert(membersAlert, errorMessage(error)));
+
+function activeDrivers(exceptId) {
+  return [...membersById.values()].filter((m) =>
+    m.role === "driver" && m.status === "active" && m.id !== exceptId
+  );
+}
+
+// لو فيه أكتر من سواق مفعّل (مثلاً سواق جديد سجل بدعوة)، ننبه ولي الأمر
+function renderDriversWarning() {
+  const drivers = activeDrivers();
+  if (drivers.length < 2) {
+    driversWarning.classList.add("d-none");
+    driversWarning.innerHTML = "";
+    return;
+  }
+  const names = drivers.map((d) => escapeHtml(d.name)).join("، ");
+  driversWarning.innerHTML = `
+    <div class="alert alert-warning mb-0" role="alert">
+      <strong>فيه ${drivers.length} سواقين مفعّلين في نفس الوقت:</strong> ${names}.
+      لو عايز سواق واحد بس، دوس "إيقاف" جنب اللي مش محتاجه.
+    </div>`;
+  driversWarning.classList.remove("d-none");
+}
+
+async function setStatuses(changes) {
+  const batch = writeBatch(db);
+  changes.forEach(({ id, status }) => {
+    batch.update(doc(db, "families", familyId, "members", id), { status, updatedAt: serverTimestamp() });
+  });
+  await batch.commit();
+}
+
+// تفعيل سواق وفيه سواق تاني شغال: ولي الأمر يقرر يوقف القديم ولا يسيب الاتنين
+async function activateDriver(target) {
+  const others = activeDrivers(target.id);
+
+  if (others.length === 0) {
+    const confirmed = await confirmDialog({
+      title: "تفعيل سواق",
+      message: `تفعيل ${target.name}؟ هيقدر يدخل السيستم تاني ويشوف المواعيد.`,
+      confirmText: "تفعيل"
+    });
+    return confirmed ? [{ id: target.id, status: "active" }] : null;
+  }
+
+  const othersNames = others.map((d) => d.name).join("، ");
+  const choice = await choiceDialog({
+    title: "تفعيل سواق",
+    message: `فيه سواق مفعّل دلوقتي: ${othersNames}. عايز توقفه وتفعّل ${target.name} مكانه، ولا تخلي الاتنين شغالين؟`,
+    choices: [
+      { label: `تفعيل ${target.name} وإيقاف ${othersNames}`, value: "replace", style: "btn-primary" },
+      { label: "تفعيل الاتنين", value: "both", style: "btn-outline-primary" }
+    ]
+  });
+
+  if (choice === "replace") {
+    return [{ id: target.id, status: "active" }, ...others.map((d) => ({ id: d.id, status: "suspended" }))];
+  }
+  if (choice === "both") return [{ id: target.id, status: "active" }];
+  return null;
+}
 
 membersList.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-action='status']");
@@ -91,6 +156,19 @@ membersList.addEventListener("click", async (event) => {
   if (!target) return;
 
   const suspending = target.status === "active";
+
+  if (!suspending && target.role === "driver") {
+    const changes = await activateDriver(target);
+    if (!changes) return;
+    hideAlert(membersAlert);
+    try {
+      await setStatuses(changes);
+    } catch (error) {
+      showAlert(membersAlert, errorMessage(error));
+    }
+    return;
+  }
+
   const confirmed = await confirmDialog({
     title: suspending ? "إيقاف عضو" : "تفعيل عضو",
     message: suspending
