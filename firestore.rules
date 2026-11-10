@@ -85,6 +85,47 @@ service cloud.firestore {
 
         allow delete: if false;
       }
+
+      // الأولاد والأماكن: كل الأعضاء يشوفوها، وأولياء الأمر بس يعدلوها
+      match /children/{childId} {
+        allow read: if isActiveMember(fid);
+        allow create, update: if hasRole(fid, ['owner', 'parent'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 40;
+        allow delete: if hasRole(fid, ['owner', 'parent']);
+      }
+
+      match /places/{placeId} {
+        allow read: if isActiveMember(fid);
+        allow create, update: if hasRole(fid, ['owner', 'parent'])
+          && request.resource.data.name is string
+          && request.resource.data.lat is number
+          && request.resource.data.lng is number;
+        allow delete: if hasRole(fid, ['owner', 'parent']);
+      }
+
+      // المواعيد مابتتمسحش، بتتلغي (cancelled) عشان السجل يفضل موجود
+      match /appointments/{appointmentId} {
+        allow read: if isActiveMember(fid);
+        allow create, update: if hasRole(fid, ['owner', 'parent'])
+          && request.resource.data.type in ['regular', 'extra']
+          && request.resource.data.childIds is list
+          && request.resource.data.childIds.size() > 0
+          && request.resource.data.date is string
+          && request.resource.data.startTime is string
+          && request.resource.data.repeatWeekly is bool
+          && request.resource.data.cancelled is bool;
+        allow delete: if false;
+      }
+
+      // تعديل أو إلغاء يوم واحد من موعد متكرر. الـ ID = appointmentId_date
+      match /occurrences/{occurrenceId} {
+        allow read: if isActiveMember(fid);
+        allow create, update: if hasRole(fid, ['owner', 'parent'])
+          && occurrenceId == request.resource.data.appointmentId + '_' + request.resource.data.date;
+        allow delete: if false;
+      }
     }
 
     match /invites/{code} {

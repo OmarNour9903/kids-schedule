@@ -55,7 +55,7 @@ function ensureModal() {
           <h2 class="modal-title h5" data-modal-title></h2>
           <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal" aria-label="إغلاق"></button>
         </div>
-        <div class="modal-body" data-modal-body></div>
+        <div class="modal-body text-prewrap" data-modal-body></div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">رجوع</button>
           <button type="button" class="btn btn-primary" data-modal-confirm>تأكيد</button>
@@ -105,7 +105,7 @@ function ensureChoiceModal() {
           <h2 class="modal-title h5" data-choice-title></h2>
           <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal" aria-label="إغلاق"></button>
         </div>
-        <div class="modal-body" data-choice-body></div>
+        <div class="modal-body text-prewrap" data-choice-body></div>
         <div class="modal-footer flex-column align-items-stretch gap-2" data-choice-buttons></div>
       </div>
     </div>`;

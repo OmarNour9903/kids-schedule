@@ -24,6 +24,8 @@ export {
   doc,
   collection,
   getDoc,
+  getDocs,
+  addDoc,
   setDoc,
   updateDoc,
   deleteDoc,

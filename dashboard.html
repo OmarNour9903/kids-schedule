@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>الرئيسية | مواعيد الأولاد</title>
+  <title>التقويم | مواعيد الأولاد</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
@@ -19,27 +19,45 @@
   </div>
 
   <main id="page-content" class="container py-4 d-none">
-    <div class="card shadow-sm mb-4">
-      <div class="card-body">
-        <h1 class="h4 fw-bold mb-1">أهلاً، <span id="welcome-name"></span></h1>
-        <p class="text-muted mb-0">دورك في العيلة: <span id="welcome-role" class="fw-semibold"></span></p>
-      </div>
-    </div>
+    <div id="calendar-alert" class="mb-3 d-none"></div>
 
-    <div class="card shadow-sm" data-show-for="owner parent viewer">
-      <div class="card-body text-center py-5">
-        <i class="bi bi-calendar3 placeholder-icon"></i>
-        <h2 class="h5 mt-3">التقويم والمواعيد</h2>
-        <p class="text-muted mb-0">هتظهر هنا في المرحلة الجاية إن شاء الله.</p>
-      </div>
-    </div>
+    <div id="setup-hint" class="alert alert-info d-none" role="alert"></div>
 
-    <div class="card shadow-sm d-none" data-show-for="driver">
-      <div class="card-body text-center py-5">
-        <i class="bi bi-car-front placeholder-icon"></i>
-        <h2 class="h5 mt-3">مواعيد النهارده</h2>
-        <p class="text-muted mb-0">مشاويرك هتظهر هنا في المرحلة الجاية إن شاء الله.</p>
-      </div>
+    <div class="row g-4">
+      <section class="col-lg-7">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="prev-month" aria-label="الشهر اللي فات">
+                <i class="bi bi-chevron-right"></i>
+              </button>
+              <div class="text-center">
+                <h1 class="h5 fw-bold mb-0" id="month-title"></h1>
+                <button type="button" class="btn btn-link btn-sm p-0" id="go-today">النهارده</button>
+              </div>
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="next-month" aria-label="الشهر الجاي">
+                <i class="bi bi-chevron-left"></i>
+              </button>
+            </div>
+            <div class="calendar-grid calendar-head" id="calendar-head"></div>
+            <div class="calendar-grid" id="calendar-days"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="col-lg-5">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+              <h2 class="h5 fw-semibold mb-0" id="day-title"></h2>
+              <a class="btn btn-primary btn-sm d-none" id="add-appointment" href="appointment-form.html">
+                <i class="bi bi-plus-lg"></i> موعد جديد
+              </a>
+            </div>
+            <ul class="list-group" id="day-list"></ul>
+          </div>
+        </div>
+      </section>
     </div>
   </main>
 

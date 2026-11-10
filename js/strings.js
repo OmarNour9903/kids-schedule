@@ -19,6 +19,20 @@ export const INVITABLE_ROLES = ["parent", "viewer", "driver"];
 
 export const INVITE_DAYS_VALID = 7;
 
+export const APPOINTMENT_TYPES = {
+  regular: "عادي",
+  extra: "إضافي"
+};
+
+export const EDIT_SCOPES = {
+  this: "اليوم ده بس",
+  future: "من اليوم ده ولكل اللي جاي",
+  all: "الموعد كله"
+};
+
+// الأدوار اللي تقدر تدير المواعيد والأولاد والأماكن
+export const MANAGER_ROLES = ["owner", "parent"];
+
 const AUTH_ERRORS = {
   "auth/invalid-credential": "الإيميل أو الباسورد غلط",
   "auth/wrong-password": "الإيميل أو الباسورد غلط",

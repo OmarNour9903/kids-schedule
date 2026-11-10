@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>موعد | مواعيد الأولاد</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+  <nav id="app-nav" class="navbar navbar-expand-md navbar-dark bg-primary"></nav>
+
+  <div id="page-loader" class="page-loader">
+    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">جاري التحميل</span></div>
+  </div>
+
+  <main id="page-content" class="container py-4 d-none form-page">
+    <a href="dashboard.html" class="small" id="back-link"><i class="bi bi-arrow-right"></i> رجوع للتقويم</a>
+    <h1 class="h4 fw-bold mt-2 mb-1" id="form-title">موعد جديد</h1>
+    <p class="text-muted small mb-4" id="form-subtitle"></p>
+
+    <div id="form-alert" class="mb-3 d-none"></div>
+
+    <form id="appointment-form" class="card shadow-sm" novalidate>
+      <div class="card-body d-grid gap-4">
+
+        <fieldset id="type-field">
+          <legend class="form-label fw-semibold fs-6">نوع الموعد</legend>
+          <div class="btn-group w-100" role="group">
+            <input type="radio" class="btn-check" name="type" id="type-regular" value="regular" checked>
+            <label class="btn btn-outline-primary" for="type-regular">عادي</label>
+            <input type="radio" class="btn-check" name="type" id="type-extra" value="extra">
+            <label class="btn btn-outline-primary" for="type-extra">إضافي</label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend class="form-label fw-semibold fs-6">الأولاد</legend>
+          <div id="children-options" class="d-flex flex-wrap gap-2"></div>
+          <div class="text-danger small mt-1 d-none" id="children-error">اختار ولد واحد على الأقل</div>
+        </fieldset>
+
+        <div class="row g-3">
+          <div class="col-md-4" id="date-field">
+            <label for="date" class="form-label fw-semibold">التاريخ</label>
+            <input type="date" class="form-control" id="date" name="date" required>
+            <div class="invalid-feedback">اختار التاريخ</div>
+          </div>
+          <div class="col-6 col-md-4">
+            <label for="startTime" class="form-label fw-semibold">معاد الذهاب</label>
+            <input type="time" class="form-control" id="startTime" name="startTime" required>
+            <div class="invalid-feedback">اختار المعاد</div>
+          </div>
+          <div class="col-6 col-md-4">
+            <label for="returnTime" class="form-label fw-semibold">معاد الرجوع <span class="text-muted small">(اختياري)</span></label>
+            <input type="time" class="form-control" id="returnTime" name="returnTime">
+            <div class="invalid-feedback">لازم يبقى بعد معاد الذهاب</div>
+          </div>
+        </div>
+
+        <div class="form-check form-switch" id="repeat-field">
+          <input class="form-check-input" type="checkbox" role="switch" id="repeatWeekly" name="repeatWeekly">
+          <label class="form-check-label" for="repeatWeekly">
+            يتكرر كل أسبوع <span class="text-muted small" id="repeat-hint"></span>
+          </label>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="pickup" class="form-label fw-semibold">مكان الاستلام</label>
+            <select class="form-select" id="pickup" name="pickup" required></select>
+            <div class="invalid-feedback">اختار مكان الاستلام</div>
+          </div>
+          <div class="col-md-6">
+            <label for="dropoff" class="form-label fw-semibold">مكان التوصيل</label>
+            <select class="form-select" id="dropoff" name="dropoff" required></select>
+            <div class="invalid-feedback">اختار مكان التوصيل</div>
+          </div>
+        </div>
+
+        <div>
+          <label for="notes" class="form-label fw-semibold">ملاحظات <span class="text-muted small">(اختياري)</span></label>
+          <textarea class="form-control" id="notes" name="notes" rows="2" maxlength="300"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg" id="form-submit">حفظ الموعد</button>
+      </div>
+    </form>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script type="module" src="js/pages/appointment-form.js"></script>
+</body>
+</html>

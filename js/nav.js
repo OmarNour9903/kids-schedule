@@ -27,7 +27,9 @@ export function renderNav(session) {
       </button>
       <div class="collapse navbar-collapse" id="main-nav">
         <ul class="navbar-nav me-auto">
-          ${link("dashboard.html", "الرئيسية")}
+          ${link("dashboard.html", "التقويم")}
+          ${canManageMembers ? link("children.html", "الأولاد") : ""}
+          ${canManageMembers ? link("places.html", "الأماكن") : ""}
           ${canManageMembers ? link("members.html", "الأعضاء") : ""}
         </ul>
         <div class="d-flex align-items-center gap-2 py-2 py-md-0">
