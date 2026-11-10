@@ -45,6 +45,20 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
       allow create, update: if signedIn() && request.auth.uid == uid;
+
+      // إشعاراته: هو بس اللي يقراها ويعلّمها مقروءة،
+      // وأي عضو مفعّل في نفس العيلة يقدر يبعتله إشعار باسمه هو
+      match /notifications/{notificationId} {
+        allow read, delete: if signedIn() && request.auth.uid == uid;
+        allow update: if signedIn() && request.auth.uid == uid && onlyChanged(['read']);
+        allow create: if signedIn()
+          && request.resource.data.actorId == request.auth.uid
+          && isActiveMember(request.resource.data.familyId)
+          && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId)/members/$(uid))
+          && request.resource.data.read == false
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 600;
+      }
     }
 
     match /families/{fid} {
@@ -109,7 +123,7 @@ service cloud.firestore {
       match /appointments/{appointmentId} {
         allow read: if isActiveMember(fid);
         allow create, update: if hasRole(fid, ['owner', 'parent'])
-          && request.resource.data.type in ['regular', 'extra']
+          && request.resource.data.type in ['regular', 'extra', 'travel']
           && request.resource.data.childIds is list
           && request.resource.data.childIds.size() > 0
           && request.resource.data.date is string
@@ -119,12 +133,45 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // تعديل أو إلغاء يوم واحد من موعد متكرر. الـ ID = appointmentId_date
+      // اللي بيحصل في يوم معين من الموعد: تعديل، إلغاء، تعيين سواق، وحالة المشوار.
+      // الـ ID = appointmentId_date
+      // أولياء الأمر يعدلوا أي حاجة، والسواق يعدّل حالة المشوار بس
       match /occurrences/{occurrenceId} {
+        function idMatches() {
+          return occurrenceId == request.resource.data.appointmentId + '_' + request.resource.data.date;
+        }
+        function validStatus() {
+          return request.resource.data.status in ['scheduled', 'confirmed', 'arrived', 'picked', 'done', 'declined'];
+        }
+        function driverKeys() {
+          return ['appointmentId', 'date', 'status', 'statusLog', 'declineReason', 'updatedBy', 'updatedAt'];
+        }
+
         allow read: if isActiveMember(fid);
-        allow create, update: if hasRole(fid, ['owner', 'parent'])
-          && occurrenceId == request.resource.data.appointmentId + '_' + request.resource.data.date;
+        allow create: if idMatches() && (
+          hasRole(fid, ['owner', 'parent'])
+          || (hasRole(fid, ['driver']) && request.resource.data.keys().hasOnly(driverKeys()) && validStatus())
+        );
+        allow update: if idMatches() && (
+          hasRole(fid, ['owner', 'parent'])
+          || (hasRole(fid, ['driver'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(driverKeys())
+            && validStatus()
+            && (!('driverId' in resource.data) || resource.data.driverId == request.auth.uid))
+        );
         allow delete: if false;
+      }
+
+      // التعليقات: أي عضو مفعّل يكتب باسمه، وصاحب التعليق بس يمسحه
+      match /comments/{commentId} {
+        allow read: if isActiveMember(fid);
+        allow create: if isActiveMember(fid)
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 500;
+        allow update: if false;
+        allow delete: if isActiveMember(fid) && resource.data.authorId == request.auth.uid;
       }
     }
 

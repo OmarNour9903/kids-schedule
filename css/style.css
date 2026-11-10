@@ -177,6 +177,50 @@ body {
   text-decoration: line-through;
 }
 
+/* شاشة السواق */
+.driver-card.cancelled {
+  opacity: 0.55;
+}
+
+/* سجل حالة المشوار */
+.status-log {
+  padding-inline-start: 1.1rem;
+}
+
+.status-log li + li {
+  margin-top: 0.35rem;
+}
+
+/* التعليقات */
+.comment {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.6rem;
+  background-color: var(--bs-tertiary-bg);
+}
+
+.comment.mine {
+  background-color: var(--bs-primary-bg-subtle);
+}
+
+/* الإشعارات */
+.notification-item {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 0;
+  background: transparent;
+  text-align: start;
+  color: inherit;
+}
+
+.notification-item.unread {
+  background-color: var(--bs-primary-bg-subtle);
+}
+
+.notification-item:hover {
+  background-color: var(--bs-tertiary-bg);
+}
+
 /* الخرائط */
 .map-picker-map {
   height: 360px;

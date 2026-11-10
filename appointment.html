@@ -45,6 +45,33 @@
         </div>
       </div>
     </div>
+
+    <section id="status-card" class="card shadow-sm mt-3 d-none">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+          <h2 class="h6 fw-semibold mb-0">حالة المشوار</h2>
+          <span class="badge" id="status-badge"></span>
+        </div>
+        <div class="alert alert-danger py-2 d-none" id="decline-box"></div>
+        <div class="d-flex flex-wrap gap-2 mb-2" id="driver-buttons"></div>
+        <button type="button" class="btn btn-sm btn-outline-primary d-none mb-2" id="assign-btn">
+          <i class="bi bi-person-gear"></i> تعيين سواق للموعد ده
+        </button>
+        <ol class="status-log small text-muted mb-0" id="status-log"></ol>
+      </div>
+    </section>
+
+    <section id="comments-card" class="card shadow-sm mt-3 d-none">
+      <div class="card-body">
+        <h2 class="h6 fw-semibold">التعليقات</h2>
+        <ul class="list-unstyled d-grid gap-2 mb-3" id="comments-list"></ul>
+        <form id="comment-form" class="d-flex gap-2" novalidate>
+          <label for="comment-text" class="visually-hidden">تعليق</label>
+          <input type="text" class="form-control" id="comment-text" maxlength="500" placeholder="اكتب تعليق على الموعد ده..." required>
+          <button type="submit" class="btn btn-primary" id="comment-submit">إرسال</button>
+        </form>
+      </div>
+    </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

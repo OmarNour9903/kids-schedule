@@ -36,6 +36,8 @@
             <label class="btn btn-outline-primary" for="type-regular">عادي</label>
             <input type="radio" class="btn-check" name="type" id="type-extra" value="extra">
             <label class="btn btn-outline-primary" for="type-extra">إضافي</label>
+            <input type="radio" class="btn-check" name="type" id="type-travel" value="travel">
+            <label class="btn btn-outline-primary" for="type-travel">سفر</label>
           </div>
         </fieldset>
 
@@ -47,21 +49,40 @@
 
         <div class="row g-3">
           <div class="col-md-4" id="date-field">
-            <label for="date" class="form-label fw-semibold">التاريخ</label>
+            <label for="date" class="form-label fw-semibold" id="date-label">التاريخ</label>
             <input type="date" class="form-control" id="date" name="date" required>
             <div class="invalid-feedback">اختار التاريخ</div>
           </div>
           <div class="col-6 col-md-4">
-            <label for="startTime" class="form-label fw-semibold">معاد الذهاب</label>
+            <label for="startTime" class="form-label fw-semibold" id="start-label">معاد الذهاب</label>
             <input type="time" class="form-control" id="startTime" name="startTime" required>
             <div class="invalid-feedback">اختار المعاد</div>
           </div>
-          <div class="col-6 col-md-4">
+          <div class="col-6 col-md-4" id="return-time-field">
             <label for="returnTime" class="form-label fw-semibold">معاد الرجوع <span class="text-muted small">(اختياري)</span></label>
             <input type="time" class="form-control" id="returnTime" name="returnTime">
             <div class="invalid-feedback">لازم يبقى بعد معاد الذهاب</div>
           </div>
         </div>
+
+        <fieldset class="row g-3 d-none" id="travel-fields">
+          <legend class="form-label fw-semibold fs-6 mb-0">تفاصيل السفر</legend>
+          <div class="col-md-4">
+            <label for="travelReturnDate" class="form-label">يوم الرجوع المتوقع</label>
+            <input type="date" class="form-control" id="travelReturnDate" name="travelReturnDate">
+            <div class="invalid-feedback">لازم يبقى في نفس يوم السفر أو بعده</div>
+          </div>
+          <div class="col-md-3">
+            <label for="travelReturnTime" class="form-label">معاد الرجوع <span class="text-muted small">(اختياري)</span></label>
+            <input type="time" class="form-control" id="travelReturnTime" name="travelReturnTime">
+          </div>
+          <div class="col-md-5">
+            <label for="travelStay" class="form-label">مكان المبيت</label>
+            <input type="text" class="form-control" id="travelStay" name="travelStay" maxlength="120" placeholder="مثلاً: فندق ... أو عند قرايب">
+            <div class="invalid-feedback">اكتب مكان المبيت، أو "مفيش مبيت"</div>
+          </div>
+          <div class="col-12 small text-muted" id="travel-days"></div>
+        </fieldset>
 
         <div class="form-check form-switch" id="repeat-field">
           <input class="form-check-input" type="checkbox" role="switch" id="repeatWeekly" name="repeatWeekly">
@@ -72,12 +93,12 @@
 
         <div class="row g-3">
           <div class="col-md-6">
-            <label for="pickup" class="form-label fw-semibold">مكان الاستلام</label>
+            <label for="pickup" class="form-label fw-semibold" id="pickup-label">مكان الاستلام</label>
             <select class="form-select" id="pickup" name="pickup" required></select>
             <div class="invalid-feedback">اختار مكان الاستلام</div>
           </div>
           <div class="col-md-6">
-            <label for="dropoff" class="form-label fw-semibold">مكان التوصيل</label>
+            <label for="dropoff" class="form-label fw-semibold" id="dropoff-label">مكان التوصيل</label>
             <select class="form-select" id="dropoff" name="dropoff" required></select>
             <div class="invalid-feedback">اختار مكان التوصيل</div>
           </div>

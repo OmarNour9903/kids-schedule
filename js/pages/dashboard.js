@@ -5,11 +5,18 @@ import { escapeHtml, showAlert, revealPage } from "../ui.js";
 import { watchFamilyData, childNames } from "../data.js";
 import { occurrencesInRange } from "../schedule.js";
 import { toKey, todayKey, formatDayLong, formatTime, monthTitle } from "../dates.js";
-import { APPOINTMENT_TYPES, MANAGER_ROLES, errorMessage } from "../strings.js";
+import { APPOINTMENT_TYPES, TRIP_STATUS, MANAGER_ROLES, errorMessage } from "../strings.js";
 
 const session = await requireSession();
-renderNav(session);
 const { familyId, member } = session;
+
+// السواق بيفتح على مشاويره، والتقويم من القايمة
+const startParams = new URLSearchParams(location.search);
+if (member.role === "driver" && !startParams.has("calendar") && !startParams.has("date")) {
+  location.replace("driver.html");
+  await new Promise(() => {});
+}
+renderNav(session);
 const canManage = MANAGER_ROLES.includes(member.role);
 
 const monthTitleEl = document.getElementById("month-title");
@@ -74,17 +81,22 @@ function occurrenceItem(occ) {
   const time = d.returnTime
     ? `<bdi>${formatTime(d.startTime)}</bdi> <span class="fw-normal text-muted small">لحد</span> <bdi>${formatTime(d.returnTime)}</bdi>`
     : `<bdi>${formatTime(d.startTime)}</bdi>`;
-  const typeBadge = d.type === "extra" ? `<span class="badge text-bg-warning">${APPOINTMENT_TYPES.extra}</span>` : "";
+  const typeBadge = d.type === "extra"
+    ? `<span class="badge text-bg-warning">${APPOINTMENT_TYPES.extra}</span>`
+    : (d.type === "travel" ? `<span class="badge text-bg-dark">${APPOINTMENT_TYPES.travel}${occ.travel ? ` ${occ.travel.day}/${occ.travel.total}` : ""}</span>` : "");
   const repeatIcon = occ.appointment.repeatWeekly ? '<i class="bi bi-arrow-repeat text-muted" title="متكرر كل أسبوع"></i>' : "";
   const editedBadge = occ.exception && occ.exception.overrides ? '<span class="badge text-bg-info">متعدّل اليوم ده</span>' : "";
   const cancelledBadge = occ.cancelled ? '<span class="badge text-bg-secondary">ملغي</span>' : "";
+  const statusBadge = !occ.cancelled && occ.status !== "scheduled"
+    ? `<span class="badge ${TRIP_STATUS[occ.status].badge}">${TRIP_STATUS[occ.status].label}</span>`
+    : "";
 
   return `
     <li class="list-group-item p-0">
       <a class="appointment-item${occ.cancelled ? " cancelled" : ""}" href="appointment.html?id=${encodeURIComponent(occ.appointment.id)}&date=${occ.date}">
         <div class="d-flex justify-content-between align-items-center gap-2">
           <span class="fw-bold">${time}</span>
-          <span class="d-flex gap-1 align-items-center">${repeatIcon}${typeBadge}${editedBadge}${cancelledBadge}</span>
+          <span class="d-flex flex-wrap justify-content-end gap-1 align-items-center">${repeatIcon}${typeBadge}${statusBadge}${editedBadge}${cancelledBadge}</span>
         </div>
         <div class="fw-semibold">${escapeHtml(childNames(d.childIds, data.children))}</div>
         <div class="small text-muted">

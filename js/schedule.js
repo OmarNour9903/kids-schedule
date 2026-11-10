@@ -11,9 +11,21 @@ export function exceptionId(appointmentId, date) {
 }
 
 // الأيام اللي الموعد بيحصل فيها بين from و to (الاتنين داخلين)
+export function isTravel(appointment) {
+  return appointment.type === "travel" && Boolean(appointment.travel?.returnDate);
+}
+
 export function datesInRange(appointment, from, to) {
   if (appointment.cancelled) return [];
   const start = appointment.date;
+
+  // السفر بيظهر في كل يوم من يوم التحرك لحد يوم الرجوع
+  if (isTravel(appointment)) {
+    const last = appointment.travel.returnDate < to ? appointment.travel.returnDate : to;
+    const dates = [];
+    for (let d = start > from ? start : from; d <= last; d = addDays(d, 1)) dates.push(d);
+    return dates;
+  }
 
   if (!appointment.repeatWeekly) {
     return start >= from && start <= to ? [start] : [];
@@ -36,10 +48,15 @@ export function occurrencesInRange(appointments, exceptions, from, to) {
     datesInRange(appointment, from, to).forEach((date) => {
       const exception = exceptions.get(exceptionId(appointment.id, date)) || null;
       const overrides = exception && exception.overrides ? exception.overrides : {};
+      const travel = isTravel(appointment)
+        ? { day: daysBetween(appointment.date, date) + 1, total: daysBetween(appointment.date, appointment.travel.returnDate) + 1 }
+        : null;
       list.push({
         appointment,
         date,
         exception,
+        travel,
+        status: (exception && exception.status) || "scheduled",
         cancelled: Boolean(exception && exception.cancelled),
         data: { ...appointment, ...overrides, date }
       });
@@ -57,7 +74,9 @@ function interval(data) {
   return [start, end];
 }
 
+// السفر بياخد اليوم كله، فأي موعد في نفس اليوم بيتعارض معاه
 export function overlaps(a, b) {
+  if (a.type === "travel" || b.type === "travel") return true;
   const [aStart, aEnd] = interval(a);
   const [bStart, bEnd] = interval(b);
   return aStart < bEnd && bStart < aEnd;
@@ -67,7 +86,7 @@ export function overlaps(a, b) {
 // ignore: دالة بترجع true للمواعيد اللي مش لازم نقارن بيها (زي الموعد نفسه وهو بيتعدل)
 // بيفحص لحد 8 أسابيع قدام لو الموعد متكرر
 export function findConflicts(candidate, appointments, exceptions, ignore = () => false) {
-  const horizon = candidate.repeatWeekly ? 56 : 0;
+  const horizon = candidate.repeatWeekly ? 56 : (isTravel(candidate) ? daysBetween(candidate.date, candidate.travel.returnDate) : 0);
   const candidateDates = datesInRange(
     { ...candidate, id: "__candidate", cancelled: false },
     candidate.date,

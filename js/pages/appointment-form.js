@@ -9,7 +9,8 @@ import { escapeHtml, showAlert, hideAlert, setLoading, confirmDialog, choiceDial
 import { loadFamilyData, childNames } from "../data.js";
 import { openMapPicker } from "../map-picker.js";
 import { findConflicts, exceptionId } from "../schedule.js";
-import { todayKey, addDays, formatDayLong, formatTime, weekdayName, timeToMinutes } from "../dates.js";
+import { todayKey, addDays, daysBetween, formatDayLong, formatTime, weekdayName, timeToMinutes } from "../dates.js";
+import { notify } from "../notify.js";
 import { APPOINTMENT_TYPES, EDIT_SCOPES, MANAGER_ROLES, errorMessage } from "../strings.js";
 
 const session = await requireSession({ roles: MANAGER_ROLES });
@@ -75,13 +76,44 @@ form.startTime.value = initial.startTime || "";
 form.returnTime.value = initial.returnTime || "";
 form.repeatWeekly.checked = Boolean(initial.repeatWeekly);
 form.notes.value = initial.notes || "";
-form.querySelector(`input[name="type"][value="${initial.type === "extra" ? "extra" : "regular"}"]`).checked = true;
+form.querySelector(`input[name="type"][value="${["extra", "travel"].includes(initial.type) ? initial.type : "regular"}"]`).checked = true;
+form.travelReturnDate.value = initial.travel?.returnDate || "";
+form.travelReturnTime.value = initial.travel?.returnTime || "";
+form.travelStay.value = initial.travel?.stay || "";
+
+const selectedType = () => form.querySelector('input[name="type"]:checked').value;
 
 function updateRepeatHint() {
   repeatHint.textContent = form.date.value ? `(كل يوم ${weekdayName(form.date.value)})` : "";
 }
-form.date.addEventListener("change", updateRepeatHint);
+
+function updateTravelDays() {
+  const el = document.getElementById("travel-days");
+  const start = lockDate ? occurrenceDate : form.date.value;
+  const end = form.travelReturnDate.value;
+  el.textContent = start && end && end >= start ? `مدة السفر: ${daysBetween(start, end) + 1} يوم` : "";
+}
+
+// السفر ليه حقول خاصة، ومابيتكررش
+function applyTypeUI() {
+  const travel = selectedType() === "travel";
+  document.getElementById("travel-fields").classList.toggle("d-none", !travel);
+  document.getElementById("return-time-field").classList.toggle("d-none", travel);
+  document.getElementById("repeat-field").classList.toggle("d-none", travel || (scope !== "new" && scope !== "all"));
+  document.getElementById("date-label").textContent = travel ? "يوم السفر" : "التاريخ";
+  document.getElementById("start-label").textContent = travel ? "معاد التحرك" : "معاد الذهاب";
+  document.getElementById("pickup-label").textContent = travel ? "مكان التحرك" : "مكان الاستلام";
+  document.getElementById("dropoff-label").textContent = travel ? "الوجهة" : "مكان التوصيل";
+  form.travelReturnDate.required = travel;
+  form.travelStay.required = travel;
+  updateTravelDays();
+}
+
+form.date.addEventListener("change", () => { updateRepeatHint(); updateTravelDays(); });
+form.travelReturnDate.addEventListener("change", updateTravelDays);
+form.querySelectorAll('input[name="type"]').forEach((r) => r.addEventListener("change", applyTypeUI));
 updateRepeatHint();
+applyTypeUI();
 
 // ---------- الأولاد ----------
 
@@ -165,44 +197,57 @@ dropoffSelect.addEventListener("change", () => onPlaceChange(dropoffSelect, "dro
 // ---------- الحفظ ----------
 
 function readForm() {
+  const type = selectedType();
+  const travel = type === "travel";
   return {
-    type: form.querySelector('input[name="type"]:checked').value,
+    type,
     childIds: [...form.querySelectorAll('input[name="childIds"]:checked')].map((i) => i.value),
     date: lockDate ? occurrenceDate : form.date.value,
     startTime: form.startTime.value,
-    returnTime: form.returnTime.value || null,
-    repeatWeekly: scope === "new" || scope === "all" ? form.repeatWeekly.checked : Boolean(original?.repeatWeekly),
+    returnTime: travel ? null : (form.returnTime.value || null),
+    repeatWeekly: travel ? false : (scope === "new" || scope === "all" ? form.repeatWeekly.checked : Boolean(original?.repeatWeekly)),
     pickup: placeChoices.pickup,
     dropoff: placeChoices.dropoff,
-    notes: form.notes.value.trim()
+    notes: form.notes.value.trim(),
+    travel: travel
+      ? { returnDate: form.travelReturnDate.value, returnTime: form.travelReturnTime.value || null, stay: form.travelStay.value.trim() }
+      : null
   };
 }
 
+// الأخطاء الخاصة لازم تتحدث الأول، وبعدين checkValidity، عشان الغلط اللي اتصلح مايفضلش مانع الحفظ
 function validate(values) {
-  let valid = form.checkValidity();
-  childrenError.classList.toggle("d-none", values.childIds.length > 0);
-  if (!values.childIds.length) valid = false;
-
   const badReturn = values.returnTime && values.startTime
     && timeToMinutes(values.returnTime) <= timeToMinutes(values.startTime);
   form.returnTime.setCustomValidity(badReturn ? "before-start" : "");
-  if (badReturn) valid = false;
+
+  const badTravelDate = values.travel && values.travel.returnDate && values.travel.returnDate < values.date;
+  form.travelReturnDate.setCustomValidity(badTravelDate ? "before-start" : "");
 
   pickupSelect.setCustomValidity(values.pickup ? "" : "required");
   dropoffSelect.setCustomValidity(values.dropoff ? "" : "required");
-  if (!values.pickup || !values.dropoff) valid = false;
+
+  childrenError.classList.toggle("d-none", values.childIds.length > 0);
 
   form.classList.add("was-validated");
-  return valid;
+  return form.checkValidity() && values.childIds.length > 0;
 }
 
 function summary(values) {
-  const lines = [
-    `الأولاد: ${childNames(values.childIds, data.children)}`,
-    `اليوم: ${formatDayLong(values.date)}${values.repeatWeekly ? ` (ويتكرر كل ${weekdayName(values.date)})` : ""}`,
-    `الذهاب: ${formatTime(values.startTime)}${values.returnTime ? ` · الرجوع: ${formatTime(values.returnTime)}` : ""}`,
-    `من: ${values.pickup.name} ← إلى: ${values.dropoff.name}`
-  ];
+  const lines = values.travel
+    ? [
+      `الأولاد: ${childNames(values.childIds, data.children)}`,
+      `السفر: ${formatDayLong(values.date)} الساعة ${formatTime(values.startTime)}`,
+      `الرجوع المتوقع: ${formatDayLong(values.travel.returnDate)}${values.travel.returnTime ? ` الساعة ${formatTime(values.travel.returnTime)}` : ""} (${daysBetween(values.date, values.travel.returnDate) + 1} يوم)`,
+      `من: ${values.pickup.name} ← الوجهة: ${values.dropoff.name}`,
+      `المبيت: ${values.travel.stay}`
+    ]
+    : [
+      `الأولاد: ${childNames(values.childIds, data.children)}`,
+      `اليوم: ${formatDayLong(values.date)}${values.repeatWeekly ? ` (ويتكرر كل ${weekdayName(values.date)})` : ""}`,
+      `الذهاب: ${formatTime(values.startTime)}${values.returnTime ? ` · الرجوع: ${formatTime(values.returnTime)}` : ""}`,
+      `من: ${values.pickup.name} ← إلى: ${values.dropoff.name}`
+    ];
   if (scope !== "this") lines.unshift(`النوع: ${APPOINTMENT_TYPES[values.type]}`);
   if (scope === "this") lines.push(`\nالتعديل ده ${EDIT_SCOPES.this}.`);
   if (scope === "future") lines.push(`\nالتعديل ده ${EDIT_SCOPES.future}.`);
@@ -254,7 +299,8 @@ function appointmentFields(values) {
     returnTime: values.returnTime,
     pickup: values.pickup,
     dropoff: values.dropoff,
-    notes: values.notes
+    notes: values.notes,
+    travel: values.travel
   };
 }
 
@@ -286,12 +332,17 @@ async function save(values) {
   }
 
   if (scope === "this") {
-    const { type, ...overrides } = appointmentFields(values);
+    const { type, travel, ...overrides } = appointmentFields(values);
+    // لو السواق كان أكد أو اعتذر، التعديل بيرجّع الموعد "مجدول" عشان يأكده من جديد
+    const resetStatus = ["confirmed", "declined"].includes(exception?.status)
+      ? { status: "scheduled", declineReason: null }
+      : {};
     await setDoc(doc(db, "families", familyId, "occurrences", exceptionId(editId, occurrenceDate)), {
       appointmentId: editId,
       date: occurrenceDate,
       overrides,
       cancelled: false,
+      ...resetStatus,
       ...stamp
     }, { merge: true });
     return { id: editId, date: occurrenceDate };
@@ -332,6 +383,13 @@ form.addEventListener("submit", async (event) => {
   setLoading(submitBtn, true, "بيتحفظ...");
   try {
     const result = await save(values);
+    const who = childNames(values.childIds, data.children);
+    const label = values.travel ? `سفر ${who}` : `موعد ${who}`;
+    const when = `${formatDayLong(result.date)} الساعة ${formatTime(values.startTime)}`;
+    const text = scope === "new"
+      ? `ضاف ${label}: ${when}${values.repeatWeekly ? ` ويتكرر كل ${weekdayName(result.date)}` : ""}`
+      : `عدّل ${label} (${EDIT_SCOPES[scope]}): ${when}`;
+    await notify(session, { audience: "all", text, appointmentId: result.id, date: result.date });
     location.href = `appointment.html?id=${encodeURIComponent(result.id)}&date=${result.date}`;
   } catch (error) {
     setLoading(submitBtn, false);

@@ -140,6 +140,69 @@ export function choiceDialog({ title, message, choices }) {
   });
 }
 
+// رسالة فيها خانة نص إجبارية (زي سبب الاعتذار). بترجع النص أو null لو رجع
+let promptEl = null;
+
+export function promptDialog({ title, message, label, confirmText = "إرسال", danger = false }) {
+  if (!promptEl) {
+    promptEl = document.createElement("div");
+    promptEl.className = "modal fade";
+    promptEl.tabIndex = -1;
+    promptEl.setAttribute("aria-hidden", "true");
+    promptEl.innerHTML = `
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title h5" data-prompt-title></h2>
+            <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+          </div>
+          <div class="modal-body">
+            <p class="text-prewrap" data-prompt-message></p>
+            <label class="form-label fw-semibold" for="prompt-input" data-prompt-label></label>
+            <textarea class="form-control" id="prompt-input" rows="3" maxlength="300" data-prompt-input></textarea>
+            <div class="invalid-feedback">الخانة دي مطلوبة</div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">رجوع</button>
+            <button type="button" class="btn" data-prompt-confirm></button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(promptEl);
+  }
+
+  const input = promptEl.querySelector("[data-prompt-input]");
+  const confirmBtn = promptEl.querySelector("[data-prompt-confirm]");
+  promptEl.querySelector("[data-prompt-title]").textContent = title;
+  promptEl.querySelector("[data-prompt-message]").textContent = message;
+  promptEl.querySelector("[data-prompt-label]").textContent = label;
+  input.value = "";
+  input.classList.remove("is-invalid");
+  confirmBtn.textContent = confirmText;
+  confirmBtn.className = `btn ${danger ? "btn-danger" : "btn-primary"}`;
+
+  return new Promise((resolve) => {
+    const modal = bootstrap.Modal.getOrCreateInstance(promptEl);
+    let result = null;
+    const onConfirm = () => {
+      const value = input.value.trim();
+      if (!value) {
+        input.classList.add("is-invalid");
+        return;
+      }
+      result = value;
+      modal.hide();
+    };
+    confirmBtn.addEventListener("click", onConfirm);
+    promptEl.addEventListener("shown.bs.modal", () => input.focus(), { once: true });
+    promptEl.addEventListener("hidden.bs.modal", () => {
+      confirmBtn.removeEventListener("click", onConfirm);
+      resolve(result);
+    }, { once: true });
+    modal.show();
+  });
+}
+
 // إظهار محتوى الصفحة بعد ما بيانات الجلسة تحمل
 export function revealPage() {
   document.getElementById("page-loader")?.classList.add("d-none");

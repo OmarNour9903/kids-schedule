@@ -32,6 +32,9 @@ export {
   writeBatch,
   query,
   where,
+  orderBy,
+  limit,
+  arrayUnion,
   onSnapshot,
   serverTimestamp,
   Timestamp

@@ -21,7 +21,18 @@ export const INVITE_DAYS_VALID = 7;
 
 export const APPOINTMENT_TYPES = {
   regular: "عادي",
-  extra: "إضافي"
+  extra: "إضافي",
+  travel: "سفر"
+};
+
+// حالات المشوار بالترتيب
+export const TRIP_STATUS = {
+  scheduled: { label: "مجدول", badge: "text-bg-light" },
+  confirmed: { label: "مؤكد من السواق", badge: "text-bg-primary" },
+  arrived: { label: "السواق وصل", badge: "text-bg-info" },
+  picked: { label: "استلم الولد", badge: "text-bg-info" },
+  done: { label: "وصّله", badge: "text-bg-success" },
+  declined: { label: "اعتذر السواق", badge: "text-bg-danger" }
 };
 
 export const EDIT_SCOPES = {
