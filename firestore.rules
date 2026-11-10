@@ -1,0 +1,114 @@
+rules_version = '2';
+
+// صلاحيات قاعدة البيانات. دي الحماية الحقيقية للسيستم،
+// لأن أي حد يقدر يفتح كود الواجهة ويعدل فيه.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function memberPath(fid) {
+      return /databases/$(database)/documents/families/$(fid)/members/$(request.auth.uid);
+    }
+
+    function isActiveMember(fid) {
+      return signedIn() && exists(memberPath(fid))
+        && get(memberPath(fid)).data.status == 'active';
+    }
+
+    function hasRole(fid, roles) {
+      return isActiveMember(fid) && get(memberPath(fid)).data.role in roles;
+    }
+
+    function onlyChanged(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    function invitePath(code) {
+      return /databases/$(database)/documents/invites/$(code);
+    }
+
+    // الدعوة لازم تكون لنفس العيلة ونفس الدور، ماتستخدمتش، ولسه صالحة،
+    // وتتعلم إنها اتستخدمت في نفس العملية
+    function validInvite(fid, code, role) {
+      let inv = get(invitePath(code)).data;
+      return inv.familyId == fid
+        && inv.role == role
+        && inv.usedBy == null
+        && request.time < inv.expiresAt
+        && getAfter(invitePath(code)).data.usedBy == request.auth.uid;
+    }
+
+    // بيانات الشخص نفسه
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /families/{fid} {
+      allow read: if isActiveMember(fid);
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.keys().hasOnly(['name', 'ownerId', 'createdAt']);
+      allow update: if hasRole(fid, ['owner']) && onlyChanged(['name']);
+
+      match /members/{uid} {
+        // العضو الموقوف يقدر يقرا عضويته بس، عشان نعرّفه إنه موقوف
+        allow get: if signedIn() && (request.auth.uid == uid || isActiveMember(fid));
+        allow list: if isActiveMember(fid);
+
+        // الانضمام: يا المالك وهو بيعمل العيلة، يا حد معاه دعوة صالحة
+        allow create: if signedIn() && request.auth.uid == uid
+          && request.resource.data.status == 'active'
+          && (
+            (request.resource.data.role == 'owner'
+              && getAfter(/databases/$(database)/documents/families/$(fid)).data.ownerId == request.auth.uid)
+            || (request.resource.data.role in ['parent', 'viewer', 'driver']
+              && validInvite(fid, request.resource.data.inviteCode, request.resource.data.role))
+          );
+
+        // المالك يغير دور أو حالة أي حد غير نفسه،
+        // وولي الأمر يوقف أو يفعّل السواقين بس
+        allow update: if
+          (hasRole(fid, ['owner'])
+            && request.auth.uid != uid
+            && resource.data.role != 'owner'
+            && onlyChanged(['role', 'status', 'updatedAt'])
+            && request.resource.data.role in ['parent', 'viewer', 'driver']
+            && request.resource.data.status in ['active', 'suspended'])
+          || (hasRole(fid, ['parent'])
+            && resource.data.role == 'driver'
+            && onlyChanged(['status', 'updatedAt'])
+            && request.resource.data.status in ['active', 'suspended']);
+
+        allow delete: if false;
+      }
+    }
+
+    match /invites/{code} {
+      // الكود نفسه هو السر (32 حرف عشوائي)، فاللي معاه اللينك بس يقدر يقراها
+      allow get: if true;
+      allow list: if signedIn() && hasRole(resource.data.familyId, ['owner']);
+
+      allow create: if signedIn()
+        && hasRole(request.resource.data.familyId, ['owner'])
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.usedBy == null
+        && request.resource.data.role in ['parent', 'viewer', 'driver'];
+
+      // اللي بيسجل بالدعوة يعلّمها إنها اتستخدمت، في نفس عملية الانضمام
+      allow update: if signedIn()
+        && resource.data.usedBy == null
+        && request.time < resource.data.expiresAt
+        && onlyChanged(['usedBy', 'usedAt'])
+        && request.resource.data.usedBy == request.auth.uid
+        && getAfter(/databases/$(database)/documents/families/$(resource.data.familyId)/members/$(request.auth.uid)).data.inviteCode == code;
+
+      allow delete: if signedIn()
+        && hasRole(resource.data.familyId, ['owner'])
+        && resource.data.usedBy == null;
+    }
+  }
+}

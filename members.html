@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>الأعضاء | مواعيد الأولاد</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+  <nav id="app-nav" class="navbar navbar-expand-md navbar-dark bg-primary"></nav>
+
+  <div id="page-loader" class="page-loader">
+    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">جاري التحميل</span></div>
+  </div>
+
+  <main id="page-content" class="container py-4 d-none">
+    <h1 class="h4 fw-bold mb-4">أعضاء العيلة</h1>
+
+    <section id="invite-section" class="card shadow-sm mb-4 d-none">
+      <div class="card-body">
+        <h2 class="h5 fw-semibold">دعوة عضو جديد</h2>
+        <p class="text-muted small">اختار الدور، وابعت اللينك للشخص. اللينك يستخدم مرة واحدة وصالح لمدة 7 أيام.</p>
+
+        <form id="invite-form" class="row g-2 align-items-end">
+          <div class="col-sm-6 col-md-4">
+            <label for="invite-role" class="form-label">الدور</label>
+            <select id="invite-role" name="role" class="form-select" required>
+              <option value="parent">ولي أمر</option>
+              <option value="viewer">مشاهد</option>
+              <option value="driver">سواق</option>
+            </select>
+          </div>
+          <div class="col-sm-6 col-md-4">
+            <button type="submit" class="btn btn-primary w-100" id="invite-submit">
+              <i class="bi bi-link-45deg"></i> اعمل لينك دعوة
+            </button>
+          </div>
+        </form>
+
+        <div id="invite-result" class="mt-3 d-none">
+          <label for="invite-link" class="form-label small">لينك الدعوة</label>
+          <div class="input-group">
+            <input type="text" id="invite-link" class="form-control" dir="ltr" readonly>
+            <button type="button" class="btn btn-outline-primary" id="invite-copy">نسخ</button>
+            <a class="btn btn-success" id="invite-whatsapp" target="_blank" rel="noopener">
+              <i class="bi bi-whatsapp"></i> واتساب
+            </a>
+          </div>
+        </div>
+
+        <div id="invites-alert" class="mt-3 d-none"></div>
+
+        <h3 class="h6 fw-semibold mt-4">دعوات لسه ماتستخدمتش</h3>
+        <ul id="invites-list" class="list-group"></ul>
+      </div>
+    </section>
+
+    <section class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="h5 fw-semibold mb-3">الأعضاء</h2>
+        <div id="members-alert" class="mb-3 d-none"></div>
+        <ul id="members-list" class="list-group"></ul>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="module" src="js/pages/members.js"></script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+:root {
+  --app-bg: #f4f6fb;
+}
+
+body {
+  font-family: "Cairo", system-ui, sans-serif;
+  background-color: var(--app-bg);
+  min-height: 100vh;
+}
+
+/* صفحات الدخول والتسجيل */
+.auth-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  border: 0;
+  border-radius: 1rem;
+}
+
+.auth-logo {
+  font-size: 2.75rem;
+  color: var(--bs-primary);
+}
+
+/* التحميل */
+.page-loader {
+  display: flex;
+  justify-content: center;
+  padding: 4rem 0;
+}
+
+.placeholder-icon {
+  font-size: 2.5rem;
+  color: var(--bs-secondary-color);
+}
+
+/* الكروت */
+.card {
+  border: 0;
+  border-radius: 0.875rem;
+}
+
+.navbar-brand .bi {
+  margin-left: 0.35rem;
+}
+
+/* الأعضاء */
+.member-role-select {
+  width: auto;
+  min-width: 8rem;
+}
+
+.member-suspended {
+  background-color: var(--bs-tertiary-bg);
+}
+
+.member-suspended .fw-semibold {
+  color: var(--bs-secondary-color);
+}
+
+.btn-close.me-auto {
+  margin-right: auto;
+}
