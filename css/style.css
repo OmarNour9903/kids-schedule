@@ -169,6 +169,15 @@ body {
   background-color: var(--bs-tertiary-bg);
 }
 
+/* ملاحظات الموعد في التقويم */
+.appointment-note {
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.4rem;
+  background-color: var(--bs-warning-bg-subtle);
+  color: var(--bs-warning-text-emphasis);
+  white-space: pre-line;
+}
+
 .appointment-item.cancelled {
   opacity: 0.55;
 }

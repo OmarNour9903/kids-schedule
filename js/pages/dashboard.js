@@ -102,6 +102,7 @@ function occurrenceItem(occ) {
         <div class="small text-muted">
           <i class="bi bi-geo-alt"></i> ${escapeHtml(d.pickup?.name || "")} ← ${escapeHtml(d.dropoff?.name || "")}
         </div>
+        ${d.notes ? `<div class="appointment-note small mt-1"><i class="bi bi-sticky"></i> ${escapeHtml(d.notes)}</div>` : ""}
       </a>
     </li>`;
 }
