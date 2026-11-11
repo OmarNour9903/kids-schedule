@@ -118,8 +118,8 @@ function renderDay() {
 function renderHint() {
   if (!canManage) return;
   let message = "";
-  if (!data.children.length) message = 'ابدأ بإضافة الأولاد من صفحة <a href="children.html">الأولاد</a>، وبعدين ضيف المواعيد.';
-  else if (!data.places.length) message = 'ضيف الأماكن اللي بتتكرر (البيت، المدرسة، النادي) من صفحة <a href="places.html">الأماكن</a> عشان إضافة المواعيد تبقى أسرع.';
+  if (!data.children.some((c) => !c.deleted)) message = 'ابدأ بإضافة الأولاد من صفحة <a href="children.html">الأولاد</a>، وبعدين ضيف المواعيد.';
+  else if (!data.places.some((p) => !p.deleted)) message = 'ضيف الأماكن اللي بتتكرر (البيت، المدرسة، النادي) من صفحة <a href="places.html">الأماكن</a> عشان إضافة المواعيد تبقى أسرع.';
   hintEl.innerHTML = message;
   hintEl.classList.toggle("d-none", !message);
 }

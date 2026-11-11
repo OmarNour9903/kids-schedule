@@ -12,7 +12,9 @@ const resetBtn = document.getElementById("reset-password");
 
 const URL_ERRORS = {
   "suspended": "حسابك موقوف حالياً. كلّم ولي الأمر لو محتاج تفعيله.",
-  "no-family": "حسابك مش مربوط بأي عيلة. استخدم لينك الدعوة اللي وصلك."
+  "no-family": "حسابك مش مربوط بأي عيلة. استخدم لينك الدعوة اللي وصلك.",
+  "disabled": "حسابك متوقف من إدارة السيستم. تواصل معانا لو محتاج تفعيله.",
+  "family-suspended": "حساب العيلة متوقف حالياً من إدارة السيستم. تواصل معانا لو محتاج تفعيله."
 };
 
 const urlError = new URLSearchParams(location.search).get("error");

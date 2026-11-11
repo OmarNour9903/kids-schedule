@@ -41,6 +41,7 @@ export function renderNav(session) {
           ${canManageMembers ? link("children.html", "الأولاد") : ""}
           ${canManageMembers ? link("places.html", "الأماكن") : ""}
           ${canManageMembers ? link("members.html", "الأعضاء") : ""}
+          ${session.isAdmin ? link("admin.html", "لوحة التحكم") : ""}
         </ul>
         <div class="d-flex align-items-center gap-2 py-2 py-md-0 ms-md-2">
           <span class="navbar-text small">

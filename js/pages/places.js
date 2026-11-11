@@ -1,4 +1,4 @@
-import { db, doc, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp } from "../firebase.js";
+import { db, doc, collection, addDoc, updateDoc, onSnapshot, serverTimestamp } from "../firebase.js";
 import { requireSession } from "../session.js";
 import { renderNav } from "../nav.js";
 import { escapeHtml, showAlert, hideAlert, confirmDialog, revealPage } from "../ui.js";
@@ -7,7 +7,7 @@ import { MANAGER_ROLES, errorMessage } from "../strings.js";
 
 const session = await requireSession({ roles: MANAGER_ROLES });
 renderNav(session);
-const { familyId } = session;
+const { familyId, user } = session;
 
 const list = document.getElementById("places-list");
 const alertBox = document.getElementById("places-alert");
@@ -20,6 +20,7 @@ function itemHtml(place) {
       <div>
         <div class="fw-semibold"><i class="bi bi-geo-alt-fill text-primary"></i> ${escapeHtml(place.name)}</div>
         <a class="small" href="${mapsLink(place)}" target="_blank" rel="noopener">افتح في Google Maps</a>
+        ${place.lat == null ? '<span class="small text-muted"> · لينك بس، من غير نقطة على الخريطة</span>' : ""}
       </div>
       <div class="d-flex gap-2">
         <button type="button" class="btn btn-sm btn-outline-primary" data-action="edit" data-id="${place.id}">تعديل</button>
@@ -29,7 +30,7 @@ function itemHtml(place) {
 }
 
 onSnapshot(placesRef, (snapshot) => {
-  places = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+  places = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })).filter((p) => !p.deleted);
   places.sort((a, b) => a.name.localeCompare(b.name, "ar"));
   list.innerHTML = places.length
     ? places.map(itemHtml).join("")
@@ -47,7 +48,9 @@ document.getElementById("add-place").addEventListener("click", async () => {
   });
   if (!confirmed) return;
   try {
-    await addDoc(placesRef, { name: result.name, lat: result.lat, lng: result.lng, createdAt: serverTimestamp() });
+    await addDoc(placesRef, {
+      name: result.name, lat: result.lat, lng: result.lng, mapsUrl: result.mapsUrl, deleted: false, createdAt: serverTimestamp()
+    });
   } catch (error) {
     showAlert(alertBox, errorMessage(error));
   }
@@ -61,7 +64,7 @@ list.addEventListener("click", async (event) => {
   hideAlert(alertBox);
 
   if (button.dataset.action === "edit") {
-    const result = await openMapPicker({ lat: place.lat, lng: place.lng, name: place.name, showSave: false });
+    const result = await openMapPicker({ lat: place.lat ?? null, lng: place.lng ?? null, name: place.name, mapsUrl: place.mapsUrl || null, showSave: false });
     if (!result) return;
     const confirmed = await confirmDialog({
       title: "تعديل مكان",
@@ -71,7 +74,7 @@ list.addEventListener("click", async (event) => {
     if (!confirmed) return;
     try {
       await updateDoc(doc(placesRef, place.id), {
-        name: result.name, lat: result.lat, lng: result.lng, updatedAt: serverTimestamp()
+        name: result.name, lat: result.lat, lng: result.lng, mapsUrl: result.mapsUrl, updatedAt: serverTimestamp()
       });
     } catch (error) {
       showAlert(alertBox, errorMessage(error));
@@ -81,13 +84,13 @@ list.addEventListener("click", async (event) => {
 
   const confirmed = await confirmDialog({
     title: "مسح مكان",
-    message: `مسح "${place.name}" من الأماكن المحفوظة؟ المواعيد اللي فيها المكان ده مش هتتأثر.`,
+    message: `مسح "${place.name}" من الأماكن المحفوظة؟ المواعيد اللي فيها المكان ده مش هتتأثر، وصاحب السيستم يقدر يرجّعه لو اتمسح بالغلط.`,
     confirmText: "مسح",
     danger: true
   });
   if (!confirmed) return;
   try {
-    await deleteDoc(doc(placesRef, place.id));
+    await updateDoc(doc(placesRef, place.id), { deleted: true, deletedAt: serverTimestamp(), deletedBy: user.uid });
   } catch (error) {
     showAlert(alertBox, errorMessage(error));
   }

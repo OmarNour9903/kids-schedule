@@ -1,10 +1,11 @@
 // التسجيل بطريقتين:
 // 1. بلينك دعوة (signup.html?invite=CODE): بينضم للعيلة بالدور اللي في الدعوة
 // 2. من غير دعوة: بيعمل عيلة جديدة ويبقى المالك
+// 3. signup.html?mode=account: حساب من غير عيلة (لحساب صاحب السيستم)
 import {
   auth, db, isConfigured,
   createUserWithEmailAndPassword, updateProfile, deleteUser,
-  doc, collection, getDoc, writeBatch, serverTimestamp
+  doc, collection, getDoc, setDoc, writeBatch, serverTimestamp
 } from "../firebase.js";
 import { escapeHtml, showAlert, hideAlert, setLoading } from "../ui.js";
 import { ROLE_LABELS, errorMessage } from "../strings.js";
@@ -16,11 +17,18 @@ const familyField = document.getElementById("family-name-field");
 const submitBtn = document.getElementById("signup-submit");
 
 const inviteCode = new URLSearchParams(location.search).get("invite");
+const accountOnly = !inviteCode && new URLSearchParams(location.search).get("mode") === "account";
 let invite = null;
 
 async function init() {
   if (!isConfigured) {
     showAlert(alertBox, "لسه إعدادات Firebase مش متحطة في js/firebase-config.js", "warning");
+  }
+
+  if (accountOnly) {
+    intro.textContent = "حساب إدارة السيستم، من غير عيلة. بعد التسجيل، صلاحية الأدمن بتتفعّل من Firebase.";
+    form.classList.remove("d-none");
+    return;
   }
 
   if (!inviteCode) {
@@ -100,6 +108,12 @@ form.addEventListener("submit", async (event) => {
     const credential = await createUserWithEmailAndPassword(auth, person.email, form.password.value);
     createdUser = credential.user;
     await updateProfile(createdUser, { displayName: person.name });
+
+    if (accountOnly) {
+      await setDoc(doc(db, "users", createdUser.uid), { ...person, familyId: null, createdAt: serverTimestamp() });
+      location.replace("admin.html");
+      return;
+    }
 
     const batch = invite
       ? buildInviteBatch(createdUser.uid, person)

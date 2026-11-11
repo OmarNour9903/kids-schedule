@@ -111,6 +111,28 @@ export function findConflicts(candidate, appointments, exceptions, ignore = () =
   return conflicts;
 }
 
+// أول يوم في الأسبوع اللي بيبدأ من start لكل يوم من الأيام المختارة (0 = الأحد)
+export function datesForWeekdays(start, weekdays) {
+  return weekdays
+    .map((w) => addDays(start, (w - weekdayOf(start) + 7) % 7))
+    .sort();
+}
+
+// خطة تعديل أو إلغاء كل مواعيد المجموعة من يوم معين (from).
+// بترجع لكل موعد: update (يتعدل كله)، split (يتقفل قبل from ويبدأ موعد جديد من nextDate)،
+// cut (يتقفل قبل from بس)، أو skip (خلص قبل from، مايتلمسش)
+export function planGroupChange(members, from) {
+  return members.filter((m) => !m.cancelled).map((m) => {
+    if (m.date >= from) return { appointment: m, action: "update" };
+    if (!m.repeatWeekly) return { appointment: m, action: "skip" };
+    if (m.repeatUntil && m.repeatUntil < from) return { appointment: m, action: "skip" };
+    const next = datesInRange(m, from, addDays(from, 6))[0] || null;
+    return next
+      ? { appointment: m, action: "split", nextDate: next }
+      : { appointment: m, action: "cut" };
+  });
+}
+
 export function isPast(date, today) {
   return daysBetween(today, date) < 0;
 }

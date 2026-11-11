@@ -1,4 +1,4 @@
-import { db, doc, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp } from "../firebase.js";
+import { db, doc, collection, addDoc, updateDoc, onSnapshot, serverTimestamp } from "../firebase.js";
 import { requireSession } from "../session.js";
 import { renderNav } from "../nav.js";
 import { escapeHtml, showAlert, hideAlert, setLoading, confirmDialog, revealPage } from "../ui.js";
@@ -6,7 +6,7 @@ import { MANAGER_ROLES, errorMessage } from "../strings.js";
 
 const session = await requireSession({ roles: MANAGER_ROLES });
 renderNav(session);
-const { familyId } = session;
+const { familyId, user } = session;
 
 const form = document.getElementById("child-form");
 const formTitle = document.getElementById("child-form-title");
@@ -35,7 +35,7 @@ function itemHtml(child) {
 }
 
 onSnapshot(childrenRef, (snapshot) => {
-  children = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+  children = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })).filter((c) => !c.deleted);
   children.sort((a, b) => a.name.localeCompare(b.name, "ar"));
   list.innerHTML = children.length
     ? children.map(itemHtml).join("")
@@ -79,7 +79,7 @@ form.addEventListener("submit", async (event) => {
     if (editingId) {
       await updateDoc(doc(childrenRef, editingId), { ...data, updatedAt: serverTimestamp() });
     } else {
-      await addDoc(childrenRef, { ...data, createdAt: serverTimestamp() });
+      await addDoc(childrenRef, { ...data, deleted: false, createdAt: serverTimestamp() });
     }
     setLoading(submitBtn, false);
     resetForm();
@@ -109,13 +109,13 @@ list.addEventListener("click", async (event) => {
 
   const confirmed = await confirmDialog({
     title: "مسح ولد",
-    message: `مسح ${child.name}؟ المواعيد القديمة هتفضل موجودة، بس اسمه مش هيظهر فيها.`,
+    message: `مسح ${child.name}؟ مش هيظهر في اختيار الأولاد في المواعيد الجديدة، والمواعيد القديمة هتفضل باسمه. صاحب السيستم يقدر يرجّعه لو اتمسح بالغلط.`,
     confirmText: "مسح",
     danger: true
   });
   if (!confirmed) return;
   try {
-    await deleteDoc(doc(childrenRef, child.id));
+    await updateDoc(doc(childrenRef, child.id), { deleted: true, deletedAt: serverTimestamp(), deletedBy: user.uid });
   } catch (error) {
     showAlert(alertBox, errorMessage(error));
   }

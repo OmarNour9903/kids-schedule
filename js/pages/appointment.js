@@ -1,13 +1,13 @@
 // تفاصيل موعد في يوم معين: البيانات، حالة المشوار، أزرار السواق، التعديل والإلغاء، والتعليقات
 import {
-  db, doc, collection, getDocs, addDoc, deleteDoc, updateDoc, setDoc,
+  db, doc, collection, getDocs, addDoc, updateDoc, setDoc, writeBatch,
   query, where, onSnapshot, arrayUnion, serverTimestamp
 } from "../firebase.js";
 import { requireSession } from "../session.js";
 import { renderNav } from "../nav.js";
 import { escapeHtml, showAlert, hideAlert, confirmDialog, choiceDialog, revealPage } from "../ui.js";
 import { watchFamilyData, childNames } from "../data.js";
-import { occurrencesInRange, exceptionId } from "../schedule.js";
+import { occurrencesInRange, exceptionId, planGroupChange } from "../schedule.js";
 import { addDays, daysBetween, formatDayLong, formatTime, weekdayName } from "../dates.js";
 import { showPlacesMap, mapsLink } from "../map-picker.js";
 import { actionButtonsHtml, runDriverAction, isAssignedTo } from "../driver-actions.js";
@@ -48,6 +48,7 @@ const commentsRef = collection(db, "families", familyId, "comments");
 
 let current = null;
 let children = [];
+let groupMembers = [];
 let mapView = null;
 let mapKey = "";
 
@@ -77,6 +78,7 @@ function renderDetails(appointment, occ) {
   if (d.type === "extra") badges.push(`<span class="badge text-bg-warning">${APPOINTMENT_TYPES.extra}</span>`);
   if (d.type === "travel") badges.push(`<span class="badge text-bg-dark">${APPOINTMENT_TYPES.travel}${occ.travel ? `: يوم ${occ.travel.day} من ${occ.travel.total}` : ""}</span>`);
   if (appointment.repeatWeekly) badges.push(`<span class="badge text-bg-light"><i class="bi bi-arrow-repeat"></i> كل ${weekdayName(appointment.date)}</span>`);
+  if (groupMembers.length > 1) badges.push(`<span class="badge text-bg-light"><i class="bi bi-collection"></i> ضمن مجموعة ${groupMembers.length} أيام</span>`);
   if (occ.exception?.overrides && !occ.cancelled) badges.push('<span class="badge text-bg-info">متعدّل اليوم ده</span>');
   document.getElementById("details-badges").innerHTML = badges.join("");
 
@@ -151,6 +153,9 @@ function renderStatus(occ) {
 function render(state) {
   children = state.children;
   const appointment = state.appointments.find((a) => a.id === id);
+  groupMembers = appointment?.groupId
+    ? state.appointments.filter((a) => a.groupId === appointment.groupId && !a.cancelled)
+    : [];
   const occ = appointment ? occurrencesInRange([appointment], state.exceptions, date, date)[0] : null;
   if (!occ) {
     card.classList.add("d-none");
@@ -171,18 +176,29 @@ function goToForm(scope) {
   location.href = `appointment-form.html?id=${encodeURIComponent(id)}&date=${date}&scope=${scope}`;
 }
 
+const inGroup = () => groupMembers.length > 1;
+const groupDays = () => groupMembers.map((m) => weekdayName(m.date)).join(" و");
+
 editBtn.addEventListener("click", async () => {
-  if (!current.appointment.repeatWeekly) {
+  const repeating = current.appointment.repeatWeekly;
+  if (!repeating && !inGroup()) {
     goToForm("all");
     return;
   }
-  const scope = await choiceDialog({
-    title: "تعديل موعد متكرر",
-    message: `الموعد ده بيتكرر كل ${weekdayName(current.appointment.date)}. عايز التعديل يبقى على أنهي أيام؟`,
-    choices: [
+  const choices = repeating
+    ? [
       { label: EDIT_SCOPES.this, value: "this", style: "btn-primary" },
       { label: EDIT_SCOPES.future, value: "future", style: "btn-outline-primary" }
     ]
+    : [{ label: "الموعد ده بس", value: "all", style: "btn-primary" }];
+  if (inGroup()) choices.push({ label: `${EDIT_SCOPES.group} (${groupDays()})`, value: "group", style: "btn-outline-primary" });
+
+  const scope = await choiceDialog({
+    title: "تعديل الموعد",
+    message: repeating
+      ? `الموعد ده بيتكرر كل ${weekdayName(current.appointment.date)}${inGroup() ? `، ومعموله مع أيام تانية (${groupDays()})` : ""}. عايز التعديل يبقى على أنهي أيام؟`
+      : `الموعد ده معموله مع أيام تانية (${groupDays()}). عايز تعدّل أنهي؟`,
+    choices
   });
   if (scope) goToForm(scope);
 });
@@ -195,14 +211,18 @@ cancelBtn.addEventListener("click", async () => {
     : `${whoText()}، ${whenText()}`;
   let scope = "all";
 
-  if (current.appointment.repeatWeekly) {
-    scope = await choiceDialog({
-      title: "إلغاء موعد متكرر",
-      message: `إلغاء موعد ${what}؟`,
-      choices: [
+  if (current.appointment.repeatWeekly || inGroup()) {
+    const choices = current.appointment.repeatWeekly
+      ? [
         { label: `إلغاء ${EDIT_SCOPES.this}`, value: "this", style: "btn-danger" },
         { label: `إلغاء ${EDIT_SCOPES.future}`, value: "future", style: "btn-outline-danger" }
       ]
+      : [{ label: "إلغاء الموعد ده بس", value: "all", style: "btn-danger" }];
+    if (inGroup()) choices.push({ label: `إلغاء ${EDIT_SCOPES.group} (${groupDays()})`, value: "group", style: "btn-outline-danger" });
+    scope = await choiceDialog({
+      title: "إلغاء موعد",
+      message: `إلغاء موعد ${what}؟`,
+      choices
     });
     if (!scope) return;
   } else {
@@ -217,12 +237,24 @@ cancelBtn.addEventListener("click", async () => {
 
   hideAlert(alertBox);
   try {
-    const text = `لغى ${travel ? "" : "موعد "}${what}${scope === "this" ? ` (${EDIT_SCOPES.this})` : scope === "future" ? ` (${EDIT_SCOPES.future})` : ""}`;
-    if (scope === "this") {
+    const text = `لغى ${travel ? "" : "موعد "}${what}${["this", "future", "group"].includes(scope) ? ` (${EDIT_SCOPES[scope]})` : ""}`;
+    // repeatUntilBefore و endedByCancel بيخلّوا صاحب السيستم يقدر يرجّع الإلغاء
+    const cutAt = (a) => ({ repeatUntil: addDays(date, -1), repeatUntilBefore: a.repeatUntil || null, endedByCancel: true, ...stamp });
+    if (scope === "group") {
+      const batch = writeBatch(db);
+      planGroupChange(groupMembers, date).forEach((p) => {
+        const ref = doc(db, "families", familyId, "appointments", p.appointment.id);
+        if (p.action === "update") batch.update(ref, { cancelled: true, ...stamp });
+        else if (p.action === "split" || p.action === "cut") batch.update(ref, cutAt(p.appointment));
+      });
+      await batch.commit();
+      await notify(session, { text });
+      location.href = `dashboard.html?date=${date}`;
+    } else if (scope === "this") {
       await setDoc(exceptionRef, { appointmentId: id, date, cancelled: true, ...stamp }, { merge: true });
       await notify(session, { text, appointmentId: id, date });
     } else if (scope === "future" && date !== current.appointment.date) {
-      await updateDoc(appointmentRef, { repeatUntil: addDays(date, -1), ...stamp });
+      await updateDoc(appointmentRef, cutAt(current.appointment));
       await notify(session, { text, appointmentId: id, date: current.appointment.date });
       location.href = `dashboard.html?date=${date}`;
     } else {
@@ -336,6 +368,7 @@ function watchComments() {
   const q = query(commentsRef, where("appointmentId", "==", id), where("date", "==", date));
   onSnapshot(q, (snapshot) => {
     comments = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+      .filter((c) => !c.deleted)
       .sort((a, b) => (a.clientAt || "").localeCompare(b.clientAt || ""));
     commentsList.innerHTML = comments.length
       ? comments.map(commentHtml).join("")
@@ -354,6 +387,7 @@ commentForm.addEventListener("submit", async (event) => {
       appointmentId: id,
       date,
       text,
+      deleted: false,
       authorId: user.uid,
       authorName: member.name,
       clientAt: new Date().toISOString(),
@@ -373,7 +407,9 @@ commentsList.addEventListener("click", async (event) => {
   const confirmed = await confirmDialog({ title: "مسح تعليق", message: "تمسح التعليق ده؟", confirmText: "مسح", danger: true });
   if (!confirmed) return;
   try {
-    await deleteDoc(doc(commentsRef, button.dataset.deleteComment));
+    await updateDoc(doc(commentsRef, button.dataset.deleteComment), {
+      deleted: true, deletedAt: serverTimestamp(), deletedBy: user.uid
+    });
   } catch (error) {
     showAlert(alertBox, errorMessage(error));
   }

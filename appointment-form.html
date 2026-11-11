@@ -84,6 +84,13 @@
           <div class="col-12 small text-muted" id="travel-days"></div>
         </fieldset>
 
+        <fieldset class="d-none" id="weekday-field">
+          <legend class="form-label fw-semibold fs-6 mb-1">الأيام</legend>
+          <p class="small text-muted mb-2">اختار يوم أو أكتر بنفس التفاصيل. هيتعمل موعد لكل يوم من تاريخ البداية.</p>
+          <div class="d-flex flex-wrap gap-2 weekday-picker" id="weekday-options"></div>
+          <div class="text-danger small mt-1 d-none" id="weekday-error">اختار يوم واحد على الأقل</div>
+        </fieldset>
+
         <div class="form-check form-switch" id="repeat-field">
           <input class="form-check-input" type="checkbox" role="switch" id="repeatWeekly" name="repeatWeekly">
           <label class="form-check-label" for="repeatWeekly">

@@ -9,13 +9,33 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // صاحب السيستم: الـ document بتاعه بيتعمل يدوي من Firebase Console بس
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function userPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    // المستخدم مش متوقف من صاحب السيستم
+    function userEnabled() {
+      return exists(userPath()) && get(userPath()).data.get('disabled', false) != true;
+    }
+
+    function familyEnabled(fid) {
+      return get(/databases/$(database)/documents/families/$(fid)).data.get('suspended', false) != true;
+    }
+
     function memberPath(fid) {
       return /databases/$(database)/documents/families/$(fid)/members/$(request.auth.uid);
     }
 
     function isActiveMember(fid) {
       return signedIn() && exists(memberPath(fid))
-        && get(memberPath(fid)).data.status == 'active';
+        && get(memberPath(fid)).data.status == 'active'
+        && userEnabled()
+        && familyEnabled(fid);
     }
 
     function hasRole(fid, roles) {
@@ -24,6 +44,11 @@ service cloud.firestore {
 
     function onlyChanged(keys) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    // الحقول اللي بتستخدم في المسح الناعم والاستعادة
+    function softDeleteKeys() {
+      return ['deleted', 'deletedAt', 'deletedBy', 'restoredAt', 'restoredBy'];
     }
 
     function invitePath(code) {
@@ -41,10 +66,21 @@ service cloud.firestore {
         && getAfter(invitePath(code)).data.usedBy == request.auth.uid;
     }
 
-    // بيانات الشخص نفسه
-    match /users/{uid} {
+    match /admins/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
-      allow create, update: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // بيانات الشخص نفسه. الإيقاف (disabled) يغيّره صاحب السيستم بس
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.get('disabled', false) == false;
+      allow update: if signedIn() && (
+        (request.auth.uid == uid
+          && request.resource.data.get('disabled', false) == resource.data.get('disabled', false))
+        || (isAdmin() && onlyChanged(['disabled', 'disabledAt', 'disabledBy']))
+      );
 
       // إشعاراته: هو بس اللي يقراها ويعلّمها مقروءة،
       // وأي عضو مفعّل في نفس العيلة يقدر يبعتله إشعار باسمه هو
@@ -62,16 +98,17 @@ service cloud.firestore {
     }
 
     match /families/{fid} {
-      allow read: if isActiveMember(fid);
+      allow read: if isActiveMember(fid) || isAdmin();
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.keys().hasOnly(['name', 'ownerId', 'createdAt']);
-      allow update: if hasRole(fid, ['owner']) && onlyChanged(['name']);
+      allow update: if (hasRole(fid, ['owner']) && onlyChanged(['name']))
+        || (isAdmin() && onlyChanged(['suspended', 'suspendedAt', 'suspendedBy']));
 
       match /members/{uid} {
         // العضو الموقوف يقدر يقرا عضويته بس، عشان نعرّفه إنه موقوف
-        allow get: if signedIn() && (request.auth.uid == uid || isActiveMember(fid));
-        allow list: if isActiveMember(fid);
+        allow get: if signedIn() && (request.auth.uid == uid || isActiveMember(fid) || isAdmin());
+        allow list: if isActiveMember(fid) || isAdmin();
 
         // الانضمام: يا المالك وهو بيعمل العيلة، يا حد معاه دعوة صالحة
         allow create: if signedIn() && request.auth.uid == uid
@@ -100,36 +137,41 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // الأولاد والأماكن: كل الأعضاء يشوفوها، وأولياء الأمر بس يعدلوها
+      // الأولاد والأماكن: كل الأعضاء يشوفوها، وأولياء الأمر بس يعدلوها.
+      // مفيش مسح نهائي: المسح بيبقى deleted = true عشان صاحب السيستم يقدر يرجّعه
       match /children/{childId} {
-        allow read: if isActiveMember(fid);
-        allow create, update: if hasRole(fid, ['owner', 'parent'])
+        allow read: if isActiveMember(fid) || isAdmin();
+        allow create, update: if (hasRole(fid, ['owner', 'parent'])
           && request.resource.data.name is string
           && request.resource.data.name.size() > 0
-          && request.resource.data.name.size() <= 40;
-        allow delete: if hasRole(fid, ['owner', 'parent']);
+          && request.resource.data.name.size() <= 40)
+          || (isAdmin() && onlyChanged(softDeleteKeys()));
+        allow delete: if false;
       }
 
       match /places/{placeId} {
-        allow read: if isActiveMember(fid);
-        allow create, update: if hasRole(fid, ['owner', 'parent'])
+        allow read: if isActiveMember(fid) || isAdmin();
+        allow create, update: if (hasRole(fid, ['owner', 'parent'])
           && request.resource.data.name is string
-          && request.resource.data.lat is number
-          && request.resource.data.lng is number;
-        allow delete: if hasRole(fid, ['owner', 'parent']);
+          && (request.resource.data.lat is number || request.resource.data.lat == null)
+          && (request.resource.data.lng is number || request.resource.data.lng == null)
+          && (request.resource.data.lat != null || request.resource.data.get('mapsUrl', null) is string))
+          || (isAdmin() && onlyChanged(softDeleteKeys()));
+        allow delete: if false;
       }
 
       // المواعيد مابتتمسحش، بتتلغي (cancelled) عشان السجل يفضل موجود
       match /appointments/{appointmentId} {
-        allow read: if isActiveMember(fid);
-        allow create, update: if hasRole(fid, ['owner', 'parent'])
+        allow read: if isActiveMember(fid) || isAdmin();
+        allow create, update: if (hasRole(fid, ['owner', 'parent'])
           && request.resource.data.type in ['regular', 'extra', 'travel']
           && request.resource.data.childIds is list
           && request.resource.data.childIds.size() > 0
           && request.resource.data.date is string
           && request.resource.data.startTime is string
           && request.resource.data.repeatWeekly is bool
-          && request.resource.data.cancelled is bool;
+          && request.resource.data.cancelled is bool)
+          || (isAdmin() && onlyChanged(['cancelled', 'repeatUntil', 'repeatUntilBefore', 'endedByCancel', 'updatedBy', 'updatedAt']));
         allow delete: if false;
       }
 
@@ -147,7 +189,7 @@ service cloud.firestore {
           return ['appointmentId', 'date', 'status', 'statusLog', 'declineReason', 'updatedBy', 'updatedAt'];
         }
 
-        allow read: if isActiveMember(fid);
+        allow read: if isActiveMember(fid) || isAdmin();
         allow create: if idMatches() && (
           hasRole(fid, ['owner', 'parent'])
           || (hasRole(fid, ['driver']) && request.resource.data.keys().hasOnly(driverKeys()) && validStatus())
@@ -162,16 +204,17 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // التعليقات: أي عضو مفعّل يكتب باسمه، وصاحب التعليق بس يمسحه
+      // التعليقات: أي عضو مفعّل يكتب باسمه، وصاحب التعليق بس يمسحه (مسح ناعم)
       match /comments/{commentId} {
-        allow read: if isActiveMember(fid);
+        allow read: if isActiveMember(fid) || isAdmin();
         allow create: if isActiveMember(fid)
           && request.resource.data.authorId == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
           && request.resource.data.text.size() <= 500;
-        allow update: if false;
-        allow delete: if isActiveMember(fid) && resource.data.authorId == request.auth.uid;
+        allow update: if (isActiveMember(fid) && resource.data.authorId == request.auth.uid && onlyChanged(softDeleteKeys()))
+          || (isAdmin() && onlyChanged(softDeleteKeys()));
+        allow delete: if false;
       }
     }
 

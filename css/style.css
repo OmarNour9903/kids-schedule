@@ -227,6 +227,21 @@ body {
   border-radius: 0.6rem;
 }
 
+.map-search-results {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+/* لوحة التحكم */
+.admin-search {
+  max-width: 280px;
+}
+
+/* اختيار أيام الأسبوع في الموعد الجديد */
+.weekday-picker .btn {
+  min-width: 4.25rem;
+}
+
 .details-map {
   height: 260px;
   border-radius: 0.6rem;
