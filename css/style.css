@@ -237,6 +237,10 @@ body {
   max-width: 280px;
 }
 
+.admin-tabs .nav-link {
+  white-space: nowrap;
+}
+
 /* اختيار أيام الأسبوع في الموعد الجديد */
 .weekday-picker .btn {
   min-width: 4.25rem;

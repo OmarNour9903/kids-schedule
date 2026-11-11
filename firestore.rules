@@ -221,7 +221,7 @@ service cloud.firestore {
     match /invites/{code} {
       // الكود نفسه هو السر (32 حرف عشوائي)، فاللي معاه اللينك بس يقدر يقراها
       allow get: if true;
-      allow list: if signedIn() && hasRole(resource.data.familyId, ['owner']);
+      allow list: if signedIn() && (hasRole(resource.data.familyId, ['owner']) || isAdmin());
 
       allow create: if signedIn()
         && hasRole(request.resource.data.familyId, ['owner'])

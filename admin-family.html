@@ -23,27 +23,91 @@
     <div id="family-alert" class="my-3 d-none"></div>
 
     <div id="family-body">
-      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2 mb-4">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2 mb-3">
         <h1 class="h4 fw-bold mb-0" id="family-name"></h1>
         <span id="family-status"></span>
       </div>
 
-      <div class="row g-3 mb-4" id="family-stats"></div>
+      <ul class="nav nav-pills flex-nowrap overflow-auto admin-tabs mb-3" role="tablist" id="family-tabs">
+        <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-overview" type="button" role="tab">نظرة عامة</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-members" type="button" role="tab">الأعضاء <span class="badge text-bg-light" data-count="members"></span></button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-children" type="button" role="tab">الأولاد <span class="badge text-bg-light" data-count="children"></span></button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-places" type="button" role="tab">الأماكن <span class="badge text-bg-light" data-count="places"></span></button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-appointments" type="button" role="tab">المواعيد <span class="badge text-bg-light" data-count="appointments"></span></button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-schedule" type="button" role="tab">الجدول</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-comments" type="button" role="tab">التعليقات <span class="badge text-bg-light" data-count="comments"></span></button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-invites" type="button" role="tab">الدعوات <span class="badge text-bg-light" data-count="invites"></span></button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-restore" type="button" role="tab">الاستعادة <span class="badge text-bg-light" data-count="restore"></span></button></li>
+      </ul>
 
-      <section class="card shadow-sm mb-4">
-        <div class="card-body">
-          <h2 class="h5 fw-semibold mb-3">الأعضاء</h2>
-          <ul class="list-group" id="family-members"></ul>
-        </div>
-      </section>
+      <div class="tab-content">
+        <section class="tab-pane fade show active" id="tab-overview" role="tabpanel">
+          <div class="row g-3 mb-3" id="family-stats"></div>
+          <div class="card shadow-sm"><div class="card-body"><dl class="row mb-0" id="family-info"></dl></div></div>
+        </section>
 
-      <section class="card shadow-sm">
-        <div class="card-body">
-          <h2 class="h5 fw-semibold">استعادة البيانات</h2>
-          <p class="small text-muted">الحاجات اللي اتمسحت أو اتلغت في العيلة دي. "استعادة" بترجّعها زي ما كانت.</p>
-          <div class="d-grid gap-3" id="restore-sections"></div>
-        </div>
-      </section>
+        <section class="tab-pane fade" id="tab-members" role="tabpanel">
+          <div class="card shadow-sm"><div class="card-body table-responsive">
+            <table class="table align-middle mb-0">
+              <thead><tr><th>الاسم</th><th>الدور</th><th>الحالة في العيلة</th><th>الحساب</th><th>الإيميل والموبايل</th><th>انضم</th></tr></thead>
+              <tbody id="members-table"></tbody>
+            </table>
+          </div></div>
+        </section>
+
+        <section class="tab-pane fade" id="tab-children" role="tabpanel">
+          <div class="card shadow-sm"><div class="card-body table-responsive">
+            <table class="table align-middle mb-0">
+              <thead><tr><th>الاسم</th><th>سنة الميلاد</th><th>ملاحظات</th><th>المواعيد الشغالة</th><th>الحالة</th></tr></thead>
+              <tbody id="children-table"></tbody>
+            </table>
+          </div></div>
+        </section>
+
+        <section class="tab-pane fade" id="tab-places" role="tabpanel">
+          <div class="card shadow-sm"><div class="card-body table-responsive">
+            <table class="table align-middle mb-0">
+              <thead><tr><th>المكان</th><th>الموقع</th><th>اتضاف</th><th>الحالة</th></tr></thead>
+              <tbody id="places-table"></tbody>
+            </table>
+          </div></div>
+        </section>
+
+        <section class="tab-pane fade" id="tab-appointments" role="tabpanel">
+          <div class="d-flex flex-wrap gap-2 mb-3" id="appointments-filter">
+            <button type="button" class="btn btn-sm btn-primary" data-filter="active">الشغالة</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-filter="ended">اللي خلصت</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-filter="cancelled">الملغية</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-filter="all">الكل</button>
+          </div>
+          <div class="d-grid gap-2" id="appointments-list"></div>
+        </section>
+
+        <section class="tab-pane fade" id="tab-schedule" role="tabpanel">
+          <p class="small text-muted">المشاوير من أسبوع فات لأسبوعين جايين، بحالة كل مشوار.</p>
+          <div class="d-grid gap-3" id="schedule-list"></div>
+        </section>
+
+        <section class="tab-pane fade" id="tab-comments" role="tabpanel">
+          <ul class="list-group shadow-sm" id="comments-list"></ul>
+        </section>
+
+        <section class="tab-pane fade" id="tab-invites" role="tabpanel">
+          <div class="card shadow-sm"><div class="card-body table-responsive">
+            <table class="table align-middle mb-0">
+              <thead><tr><th>الدور</th><th>اتعملت</th><th>صالحة لحد</th><th>الحالة</th></tr></thead>
+              <tbody id="invites-table"></tbody>
+            </table>
+          </div></div>
+        </section>
+
+        <section class="tab-pane fade" id="tab-restore" role="tabpanel">
+          <div class="card shadow-sm"><div class="card-body">
+            <p class="small text-muted">الحاجات اللي اتمسحت أو اتلغت في العيلة دي. "استعادة" بترجّعها زي ما كانت.</p>
+            <div class="d-grid gap-3" id="restore-sections"></div>
+          </div></div>
+        </section>
+      </div>
     </div>
   </main>
 
