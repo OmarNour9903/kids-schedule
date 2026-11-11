@@ -89,14 +89,17 @@ export async function requireSession({ roles } = {}) {
   return session;
 }
 
-// صفحات صاحب السيستم: بترجع { user } أو بتعرض رسالة لو الحساب مش أدمن
+// صفحات صاحب السيستم بس: أي حد تاني بيرجع لصفحته العادية من غير ما يشوف أي حاجة من اللوحة
 export async function requireAdmin() {
   const user = await waitForUser();
   if (!user) {
     location.replace("index.html");
     return stop();
   }
-  if (!(await checkAdmin(user.uid))) return { user, notAdmin: true };
+  if (!(await checkAdmin(user.uid))) {
+    location.replace("dashboard.html");
+    return stop();
+  }
   return { user };
 }
 

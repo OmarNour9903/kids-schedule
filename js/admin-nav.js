@@ -22,17 +22,6 @@ export function renderAdminNav(active) {
   document.getElementById("logout-btn").addEventListener("click", logout);
 }
 
-export function notAdminHtml(uid) {
-  return `
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h1 class="h5 fw-bold">الحساب ده مش حساب إدارة</h1>
-        <p class="mb-2">لو ده حساب صاحب السيستم، صلاحية الأدمن لسه ماتفعّلتش. ابعت الكود ده عشان تتفعّل:</p>
-        <code class="d-block p-2 bg-body-tertiary rounded-2 user-select-all" dir="ltr">${uid}</code>
-      </div>
-    </div>`;
-}
-
 export function formatDate(value) {
   if (!value) return "-";
   const date = value.toDate ? value.toDate() : new Date(value);

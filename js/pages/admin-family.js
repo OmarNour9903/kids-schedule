@@ -4,7 +4,7 @@ import {
   db, collection, doc, getDoc, getDocs, updateDoc, query, where, serverTimestamp
 } from "../firebase.js";
 import { requireAdmin } from "../session.js";
-import { renderAdminNav, notAdminHtml, formatDate } from "../admin-nav.js";
+import { renderAdminNav, formatDate } from "../admin-nav.js";
 import { escapeHtml, showAlert, hideAlert, confirmDialog, revealPage } from "../ui.js";
 import { childNames } from "../data.js";
 import { occurrencesInRange, exceptionId } from "../schedule.js";
@@ -12,16 +12,11 @@ import { todayKey, addDays, formatDayLong, formatTime, weekdayName } from "../da
 import { mapsLink } from "../map-picker.js";
 import { ROLE_LABELS, STATUS_LABELS, APPOINTMENT_TYPES, TRIP_STATUS, errorMessage } from "../strings.js";
 
+// التحقق إن الحساب أدمن قبل ما أي حاجة من اللوحة تظهر
+const { user } = await requireAdmin();
 renderAdminNav("");
-const { user, notAdmin } = await requireAdmin();
 const alertBox = document.getElementById("family-alert");
 const body = document.getElementById("family-body");
-
-if (notAdmin) {
-  body.innerHTML = notAdminHtml(user.uid);
-  revealPage();
-  await new Promise(() => {}); // نوقف الصفحة هنا من غير خطأ
-}
 
 const familyId = new URLSearchParams(location.search).get("id");
 const sub = (name) => collection(db, "families", familyId, name);

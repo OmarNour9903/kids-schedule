@@ -1,20 +1,14 @@
 // لوحة تحكم صاحب السيستم: كل العائلات وكل المستخدمين، وإيقاف وتشغيل الحسابات
 import { db, collection, doc, getDocs, updateDoc, serverTimestamp } from "../firebase.js";
 import { requireAdmin } from "../session.js";
-import { renderAdminNav, notAdminHtml, formatDate } from "../admin-nav.js";
+import { renderAdminNav, formatDate } from "../admin-nav.js";
 import { escapeHtml, showAlert, hideAlert, confirmDialog, revealPage } from "../ui.js";
 import { ROLE_LABELS, errorMessage } from "../strings.js";
 
+// التحقق إن الحساب أدمن قبل ما أي حاجة من اللوحة تظهر
+const { user } = await requireAdmin();
 renderAdminNav("admin.html");
-const { user, notAdmin } = await requireAdmin();
 const alertBox = document.getElementById("admin-alert");
-const body = document.getElementById("admin-body");
-
-if (notAdmin) {
-  body.innerHTML = notAdminHtml(user.uid);
-  revealPage();
-  await new Promise(() => {}); // نوقف الصفحة هنا من غير خطأ
-}
 
 const familiesTable = document.getElementById("families-table");
 const usersTable = document.getElementById("users-table");
