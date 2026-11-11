@@ -223,7 +223,7 @@ body {
 
 /* الخرائط */
 .map-picker-map {
-  height: 360px;
+  height: 240px;
   border-radius: 0.6rem;
 }
 
@@ -266,6 +266,7 @@ body {
   }
 
   .map-picker-map {
-    height: 55vh;
+    height: 24vh;
+    min-height: 170px;
   }
 }

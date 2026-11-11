@@ -57,8 +57,13 @@ function ensureModal() {
         </div>
         <div class="modal-body d-grid gap-3">
 
+          <p class="small mb-0">
+            3 طرق: <strong>ابحث بالاسم</strong>، أو <strong>دوس على الخريطة</strong>،
+            أو <strong>هات اللينك من Google Maps</strong> (تحت الخريطة).
+          </p>
+
           <div>
-            <label class="form-label fw-semibold" for="map-search">ابحث بالاسم</label>
+            <label class="form-label fw-semibold" for="map-search">1. ابحث بالاسم</label>
             <div class="input-group">
               <input type="search" class="form-control" id="map-search" placeholder="مثلاً: نادي الصيد الدقي" data-search>
               <button type="button" class="btn btn-outline-primary" data-search-btn><i class="bi bi-search"></i> بحث</button>
@@ -67,42 +72,51 @@ function ensureModal() {
           </div>
 
           <div>
+            <div class="form-label fw-semibold">2. أو دوس على الخريطة في مكان النقطة بالظبط</div>
             <div class="map-picker-map" data-map></div>
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
-              <span class="small text-muted">دوس على الخريطة في مكان النقطة بالظبط. غيّر لـ "قمر صناعي" من فوق لو محتاج تفاصيل أكتر.</span>
-              <button type="button" class="btn btn-sm btn-outline-secondary" data-locate>
+            <div class="d-flex justify-content-between align-items-center gap-2 mt-1">
+              <span class="small text-muted">"قمر صناعي" من فوق الخريطة = تفاصيل أكتر.</span>
+              <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap" data-locate>
                 <i class="bi bi-crosshair"></i> موقعي الحالي
               </button>
             </div>
           </div>
 
-          <div class="border rounded-3 p-3">
-            <label class="form-label fw-semibold" for="map-paste">أو الصق لينك المكان من Google Maps</label>
-            <div class="input-group">
-              <input type="text" class="form-control" id="map-paste" dir="ltr" placeholder="https://maps.app.goo.gl/... أو 30.0444, 31.2357" data-paste>
-              <button type="button" class="btn btn-outline-primary" data-paste-btn>استخدم</button>
+          <div class="border border-primary-subtle rounded-3 p-3 bg-primary-subtle bg-opacity-25">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+              <span class="fw-semibold">3. أو هات المكان من Google Maps</span>
+              <a class="btn btn-sm btn-success" href="https://www.google.com/maps" target="_blank" rel="noopener" data-gmaps>
+                <i class="bi bi-box-arrow-up-left"></i> افتح Google Maps
+              </a>
             </div>
-            <details class="small text-muted mt-2">
-              <summary>إزاي أجيب اللينك من Google Maps؟</summary>
-              <ol class="mb-0 mt-1">
-                <li>افتح Google Maps وابحث عن المكان، أو دوس مطوّل على النقطة بالظبط.</li>
-                <li>دوس <strong>مشاركة (Share)</strong> وبعدين <strong>نسخ الرابط</strong>، والصقه هنا.</li>
-                <li>لو دوست مطوّل على النقطة، هتظهر أرقام فوق زي 30.0444, 31.2357. تقدر تنسخها وتلصقها هنا كمان، ودي أدق طريقة.</li>
-              </ol>
-            </details>
+            <ol class="small mb-2 ps-3">
+              <li>في Google Maps ابحث عن المكان، أو دوس مطوّل على النقطة بالظبط.</li>
+              <li>دوس <strong>مشاركة (Share)</strong> ← <strong>نسخ الرابط</strong>، أو انسخ الأرقام اللي بتظهر فوق زي 30.0444, 31.2357.</li>
+              <li>ارجع هنا ودوس <strong>لصق</strong>.</li>
+            </ol>
+            <div class="input-group">
+              <label class="visually-hidden" for="map-paste">لينك Google Maps أو الإحداثيات</label>
+              <input type="text" class="form-control" id="map-paste" dir="ltr" placeholder="https://maps.app.goo.gl/... أو 30.0444, 31.2357" data-paste>
+              <button type="button" class="btn btn-outline-primary" data-clipboard-btn><i class="bi bi-clipboard"></i> لصق</button>
+              <button type="button" class="btn btn-primary" data-paste-btn>استخدم</button>
+            </div>
+            <div class="text-danger small mt-1 d-none" data-error-paste></div>
           </div>
 
-          <div class="alert alert-light border py-2 mb-0 small" data-picked>لسه ماحددتش مكان.</div>
+          <div>
+            <div class="alert alert-light border py-2 mb-0 small" data-picked>لسه ماحددتش مكان.</div>
+            <div class="alert alert-danger py-2 mt-2 mb-0 small d-none" data-error-place></div>
+          </div>
 
           <div>
             <label class="form-label fw-semibold" for="map-place-name">اسم المكان</label>
             <input type="text" class="form-control" id="map-place-name" maxlength="60" placeholder="مثلاً: نادي الصيد" data-name>
+            <div class="invalid-feedback" data-error-name></div>
           </div>
           <div class="form-check" data-save-wrap>
             <input class="form-check-input" type="checkbox" id="map-place-save" data-save checked>
             <label class="form-check-label" for="map-place-save">احفظه في الأماكن المحفوظة</label>
           </div>
-          <div class="text-danger small d-none" data-error></div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">رجوع</button>
@@ -117,10 +131,29 @@ function el(name) {
   return modalEl.querySelector(`[data-${name}]`);
 }
 
-function showError(message) {
-  const box = el("error");
-  box.textContent = message;
-  box.classList.toggle("d-none", !message);
+// كل رسالة خطأ بتظهر تحت الخانة اللي فيها المشكلة، والشاشة بتنزل لحدها
+function showError(field, message) {
+  const box = el(`error-${field}`);
+  box.textContent = message || "";
+  if (field === "name") {
+    el("name").classList.toggle("is-invalid", Boolean(message));
+  } else {
+    box.classList.toggle("d-none", !message);
+  }
+  if (message) box.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function clearErrors() {
+  ["paste", "place", "name"].forEach((f) => showError(f, ""));
+}
+
+// زرار Google Maps بيفتح على اللي المستخدم كتبه في البحث، أو على النقطة اللي حددها
+function updateGoogleLink() {
+  const q = el("search").value.trim();
+  let href = "https://www.google.com/maps/@30.0444,31.2357,12z";
+  if (q) href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+  else if (picked) href = `https://www.google.com/maps/search/?api=1&query=${picked.lat},${picked.lng}`;
+  el("gmaps").href = href;
 }
 
 function updatePickedText() {
@@ -140,7 +173,8 @@ function setMarker(lat, lng, zoom) {
   else marker = L.marker([lat, lng]).addTo(map);
   if (zoom) map.setView([lat, lng], zoom);
   updatePickedText();
-  showError("");
+  updateGoogleLink();
+  showError("place", "");
 }
 
 async function search() {
@@ -177,15 +211,28 @@ async function search() {
 function usePasted() {
   const parsed = parseLocation(el("paste").value);
   if (!parsed) {
-    showError("ماقدرناش نقرا اللينك ده. الصق لينك من Google Maps أو إحداثيات زي 30.0444, 31.2357");
+    showError("paste", "ماقدرناش نقرا اللينك ده. انسخ لينك المكان من Google Maps (مشاركة ← نسخ الرابط) أو الأرقام زي 30.0444, 31.2357");
     return;
   }
   pickedUrl = parsed.url || null;
+  showError("paste", "");
   if (parsed.lat != null) {
     setMarker(parsed.lat, parsed.lng, 17);
   } else {
     updatePickedText();
-    showError("");
+    showError("place", "");
+  }
+}
+
+async function pasteFromClipboard() {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (!text.trim()) throw new Error("empty");
+    el("paste").value = text.trim();
+    usePasted();
+  } catch (error) {
+    el("paste").focus();
+    showError("paste", "ماقدرناش نقرا اللي انت ناسخه. دوس مطوّل في الخانة واختار لصق (Paste)، وبعدين دوس استخدم.");
   }
 }
 
@@ -199,8 +246,9 @@ export function openMapPicker({ lat, lng, name = "", mapsUrl = null, showSave = 
   el("paste").value = mapsUrl || "";
   picked = lat != null ? { lat, lng } : null;
   pickedUrl = mapsUrl || null;
-  showError("");
+  clearErrors();
   updatePickedText();
+  updateGoogleLink();
 
   return new Promise((resolve) => {
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -223,16 +271,20 @@ export function openMapPicker({ lat, lng, name = "", mapsUrl = null, showSave = 
       if (!navigator.geolocation) return;
       navigator.geolocation.getCurrentPosition(
         (pos) => setMarker(pos.coords.latitude, pos.coords.longitude, 17),
-        () => showError("ماقدرناش نوصل لموقعك. اسمح للمتصفح بالموقع، أو اختار من الخريطة.")
+        () => showError("place", "ماقدرناش نوصل لموقعك. اسمح للمتصفح بالموقع، أو اختار من الخريطة.")
       );
     };
     const onSearchKey = (e) => { if (e.key === "Enter") { e.preventDefault(); search(); } };
     const onPasteKey = (e) => { if (e.key === "Enter") { e.preventDefault(); usePasted(); } };
+    const onNameInput = () => { if (el("name").value.trim()) showError("name", ""); };
 
     const onDone = () => {
       const placeName = el("name").value.trim();
-      if (!picked && !pickedUrl) return showError("حدد المكان: من البحث، أو دوس على الخريطة، أو الصق لينك.");
-      if (!placeName) return showError("اكتب اسم المكان.");
+      if (!picked && !pickedUrl) return showError("place", "لسه ماحددتش المكان: ابحث بالاسم، أو دوس على الخريطة، أو هات اللينك من Google Maps.");
+      if (!placeName) {
+        el("name").focus();
+        return showError("name", "اكتب اسم المكان.");
+      }
       result = {
         name: placeName,
         lat: picked ? picked.lat : null,
@@ -249,7 +301,10 @@ export function openMapPicker({ lat, lng, name = "", mapsUrl = null, showSave = 
       [el("search-btn"), "click", search],
       [el("search"), "keydown", onSearchKey],
       [el("paste-btn"), "click", usePasted],
-      [el("paste"), "keydown", onPasteKey]
+      [el("paste"), "keydown", onPasteKey],
+      [el("clipboard-btn"), "click", pasteFromClipboard],
+      [el("search"), "input", updateGoogleLink],
+      [el("name"), "input", onNameInput]
     ];
     bindings.forEach(([node, type, fn]) => node.addEventListener(type, fn));
 

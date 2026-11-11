@@ -12,6 +12,8 @@ export function escapeHtml(value) {
 export function showAlert(container, message, type = "danger") {
   container.innerHTML = `<div class="alert alert-${type} mb-0" role="alert">${escapeHtml(message)}</div>`;
   container.classList.remove("d-none");
+  // الرسالة لازم تبان حتى لو المستخدم نازل تحت في الصفحة
+  container.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 export function hideAlert(container) {
