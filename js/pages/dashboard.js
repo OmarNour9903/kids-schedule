@@ -1,9 +1,10 @@
 // التقويم الشهري: كل يوم عليه عدد مواعيده، ولما تدوس على يوم تظهر مواعيده
+import { db, collection, onSnapshot } from "../firebase.js";
 import { requireSession } from "../session.js";
 import { renderNav } from "../nav.js";
 import { escapeHtml, showAlert, revealPage } from "../ui.js";
 import { watchFamilyData, childNames } from "../data.js";
-import { occurrencesInRange } from "../schedule.js";
+import { occurrencesInRange, exceptionId } from "../schedule.js";
 import { toKey, todayKey, formatDayLong, formatTime, monthTitle } from "../dates.js";
 import { APPOINTMENT_TYPES, TRIP_STATUS, MANAGER_ROLES, errorMessage } from "../strings.js";
 
@@ -103,8 +104,25 @@ function occurrenceItem(occ) {
           <i class="bi bi-geo-alt"></i> ${escapeHtml(d.pickup?.name || "")} ← ${escapeHtml(d.dropoff?.name || "")}
         </div>
         ${d.notes ? `<div class="appointment-note small mt-1"><i class="bi bi-sticky"></i> ${escapeHtml(d.notes)}</div>` : ""}
+        ${commentsHtml(occ)}
       </a>
     </li>`;
+}
+
+// تعليقات الأعضاء على الموعد في اليوم ده: آخر 3، والباقي عدد
+const MAX_COMMENTS = 3;
+let commentsByOccurrence = new Map();
+
+function commentsHtml(occ) {
+  const list = commentsByOccurrence.get(exceptionId(occ.appointment.id, occ.date)) || [];
+  if (!list.length) return "";
+  const shown = list.slice(-MAX_COMMENTS);
+  const more = list.length - shown.length;
+  return `
+    <div class="appointment-comments small mt-1">
+      ${more ? `<div class="text-muted">و${more} تعليقات أقدم</div>` : ""}
+      ${shown.map((c) => `<div><i class="bi bi-chat-left-text"></i> <strong>${escapeHtml(c.authorName)}:</strong> ${escapeHtml(c.text)}</div>`).join("")}
+    </div>`;
 }
 
 function renderDay() {
@@ -156,6 +174,18 @@ daysEl.addEventListener("click", (event) => {
   renderDay();
   dayTitleEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
 });
+
+onSnapshot(collection(db, "families", familyId, "comments"), (snapshot) => {
+  const map = new Map();
+  snapshot.docs.map((d) => d.data()).filter((c) => !c.deleted)
+    .sort((a, b) => (a.clientAt || "").localeCompare(b.clientAt || ""))
+    .forEach((c) => {
+      const key = exceptionId(c.appointmentId, c.date);
+      map.set(key, [...(map.get(key) || []), c]);
+    });
+  commentsByOccurrence = map;
+  if (data) renderDay();
+}, () => {});
 
 watchFamilyData(familyId, (state) => {
   const first = !data;

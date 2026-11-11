@@ -178,6 +178,18 @@ body {
   white-space: pre-line;
 }
 
+/* تعليقات الأعضاء على الموعد في التقويم */
+.appointment-comments {
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.4rem;
+  background-color: var(--bs-info-bg-subtle);
+  color: var(--bs-info-text-emphasis);
+}
+
+.appointment-comments > div + div {
+  margin-top: 0.15rem;
+}
+
 .appointment-item.cancelled {
   opacity: 0.55;
 }
