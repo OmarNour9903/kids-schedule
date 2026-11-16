@@ -26,15 +26,23 @@ let day = /^\d{4}-\d{2}-\d{2}$/.test(new URLSearchParams(location.search).get("d
 let data = null;
 let current = [];
 
+// اسم المكان + زرار يفتح اللوكيشن على Google Maps، أو زرار مقفول لو ولي الأمر ماحطش لوكيشن
 function placeLine(icon, label, place) {
   if (!place) return "";
+  const link = mapsLink(place);
+  const button = link
+    ? `<a class="btn btn-sm btn-outline-success ms-auto" href="${escapeHtml(link)}" target="_blank" rel="noopener" data-location-btn>
+        <i class="bi bi-geo-alt"></i> افتح اللوكيشن
+      </a>`
+    : `<button type="button" class="btn btn-sm btn-outline-secondary ms-auto" disabled data-location-btn>
+        <i class="bi bi-geo-alt"></i> من غير لوكيشن
+      </button>`;
   return `
-    <div class="d-flex align-items-center gap-2">
+    <div class="d-flex flex-wrap align-items-center gap-2">
       <i class="bi ${icon} text-primary"></i>
       <span class="text-muted small">${label}</span>
-      ${mapsLink(place)
-        ? `<a href="${escapeHtml(mapsLink(place))}" target="_blank" rel="noopener" class="fw-semibold">${escapeHtml(place.name)}</a>`
-        : `<span class="fw-semibold">${escapeHtml(place.name)}</span>`}
+      <span class="fw-semibold">${escapeHtml(place.name)}</span>
+      ${button}
     </div>`;
 }
 

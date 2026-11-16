@@ -80,12 +80,7 @@ function ensureModal() {
             <div class="text-danger small mt-1 d-none" data-error-paste></div>
           </div>
 
-          <div class="alert alert-light border py-2 mb-0 small d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <span data-picked></span>
-            <button type="button" class="btn btn-sm btn-outline-danger d-none" data-clear-location>
-              <i class="bi bi-x-lg"></i> شيل اللوكيشن
-            </button>
-          </div>
+          <div class="alert alert-light border py-2 mb-0 small" data-picked></div>
 
           <div class="form-check" data-save-wrap>
             <input class="form-check-input" type="checkbox" id="map-place-save" data-save checked>
@@ -135,16 +130,7 @@ function updatePickedText() {
   if (picked) text = `فيه لوكيشن: (${picked.lat.toFixed(5)}, ${picked.lng.toFixed(5)})`;
   else if (pickedUrl) text = "فيه لوكيشن: لينك Google Maps، السواق هيفتحه في Google Maps على طول.";
   el("picked").textContent = text;
-  el("clear-location").classList.toggle("d-none", !picked && !pickedUrl);
   updateGoogleLink();
-}
-
-function clearLocation() {
-  picked = null;
-  pickedUrl = null;
-  el("paste").value = "";
-  showError("paste", "");
-  updatePickedText();
 }
 
 function usePasted() {
@@ -214,7 +200,6 @@ export function openMapPicker({ lat, lng, name = "", mapsUrl = null, showSave = 
       [el("paste-btn"), "click", usePasted],
       [el("paste"), "keydown", onPasteKey],
       [el("clipboard-btn"), "click", pasteFromClipboard],
-      [el("clear-location"), "click", clearLocation],
       [el("name"), "input", onNameInput]
     ];
     bindings.forEach(([node, type, fn]) => node.addEventListener(type, fn));

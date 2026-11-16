@@ -3,7 +3,7 @@
 // - المكتبات (Bootstrap، Firebase، الخطوط): من النسخة المحفوظة الأول لأن روابطها فيها رقم الإصدار.
 // - بيانات Firebase نفسها مش بتعدي من هنا: Firebase بيخزنها لوحده على الجهاز.
 // لو ضفت صفحة أو ملف جديد: ضيفه في LOCAL وغيّر رقم CACHE.
-const CACHE = "kids-schedule-v1";
+const CACHE = "kids-schedule-v2";
 
 const LOCAL = [
   "./",
@@ -118,7 +118,8 @@ async function networkFirst(request, url) {
   const key = url.origin + url.pathname;
   const cached = await cache.match(key);
 
-  const network = fetch(request).then(async (response) => {
+  // no-cache: بيسأل GitHub كل مرة لو فيه نسخة أحدث (لو مفيش، الرد صغير وسريع)
+  const network = fetch(request, { cache: "no-cache" }).then(async (response) => {
     const ready = await clean(response);
     if (ready.ok) await cache.put(key, ready.clone());
     return ready;
