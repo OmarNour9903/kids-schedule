@@ -2,8 +2,9 @@
 import { db, collection, onSnapshot } from "../firebase.js";
 import { requireSession } from "../session.js";
 import { renderNav } from "../nav.js";
-import { escapeHtml, showAlert, revealPage } from "../ui.js";
-import { watchFamilyData, childNames } from "../data.js";
+import { escapeHtml, showAlert, revealPage, pendingBadge } from "../ui.js";
+import { watchFamilyData, childNames, isLegPending } from "../data.js";
+import { offlineRangeNote } from "../offline.js";
 import { legsInRange, exceptionId } from "../schedule.js";
 import { toKey, todayKey, formatDayLong, formatTime, monthTitle } from "../dates.js";
 import { APPOINTMENT_TYPES, TRIP_STATUS, LEG_LABELS, MANAGER_ROLES, errorMessage } from "../strings.js";
@@ -88,6 +89,7 @@ function legItem(leg) {
   const repeatIcon = occ.appointment.repeatWeekly ? '<i class="bi bi-arrow-repeat text-muted" title="متكرر كل أسبوع"></i>' : "";
   const editedBadge = occ.exception && occ.exception.overrides ? '<span class="badge text-bg-info">متعدّل اليوم ده</span>' : "";
   const cancelledBadge = occ.cancelled ? '<span class="badge text-bg-secondary">ملغي</span>' : "";
+  const pending = isLegPending(leg, data) ? pendingBadge() : "";
   const statusBadge = !occ.cancelled && leg.status !== "scheduled"
     ? `<span class="badge ${TRIP_STATUS[leg.status].badge}">${TRIP_STATUS[leg.status].label}</span>`
     : "";
@@ -97,7 +99,7 @@ function legItem(leg) {
       <a class="appointment-item${occ.cancelled ? " cancelled" : ""}" href="appointment.html?id=${encodeURIComponent(occ.appointment.id)}&date=${occ.date}">
         <div class="d-flex justify-content-between align-items-center gap-2">
           <span class="d-flex align-items-center gap-2"><bdi class="fw-bold">${formatTime(leg.time)}</bdi>${legBadge}</span>
-          <span class="d-flex flex-wrap justify-content-end gap-1 align-items-center">${repeatIcon}${typeBadge}${statusBadge}${editedBadge}${cancelledBadge}</span>
+          <span class="d-flex flex-wrap justify-content-end gap-1 align-items-center">${repeatIcon}${typeBadge}${statusBadge}${editedBadge}${cancelledBadge}${pending}</span>
         </div>
         <div class="fw-semibold">${escapeHtml(childNames(d.childIds, data.children))}</div>
         <div class="small text-muted">
@@ -129,10 +131,15 @@ function renderDay() {
   dayTitleEl.textContent = formatDayLong(selected);
   addBtn.href = `appointment-form.html?date=${selected}`;
   const list = legsInRange(data.appointments, data.exceptions, selected, selected);
-  dayListEl.innerHTML = list.length
-    ? list.map(legItem).join("")
-    : '<li class="list-group-item text-muted">مفيش مواعيد اليوم ده.</li>';
+  const note = offlineRangeNote(selected);
+  dayListEl.innerHTML = (note ? `<li class="list-group-item list-group-item-warning small">${note}</li>` : "")
+    + (list.length
+      ? list.map(legItem).join("")
+      : '<li class="list-group-item text-muted">مفيش مواعيد اليوم ده.</li>');
 }
+
+// النت قطع أو رجع: نحدّث تنبيه الأيام المضمونة أوفلاين
+["online", "offline"].forEach((name) => window.addEventListener(name, () => { if (data) renderDay(); }));
 
 function renderHint() {
   if (!canManage) return;

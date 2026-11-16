@@ -10,6 +10,7 @@ import { escapeHtml, showAlert, hideAlert, setLoading, confirmDialog, choiceDial
 import { loadFamilyData, childNames } from "../data.js";
 import { openMapPicker } from "../map-picker.js";
 import { findConflicts, exceptionId, datesForWeekdays, planGroupChange } from "../schedule.js";
+import { isOffline } from "../offline.js";
 import { todayKey, addDays, daysBetween, formatDayLong, formatTime, weekdayName, weekdayOf, timeToMinutes, WEEKDAYS } from "../dates.js";
 import { notify } from "../notify.js";
 import { APPOINTMENT_TYPES, EDIT_SCOPES, MANAGER_ROLES, errorMessage } from "../strings.js";
@@ -348,7 +349,11 @@ function candidatesFor(values) {
   }));
 }
 
+// وإنت أوفلاين فحص التعارض بيشوف المواعيد اللي على الجهاز بس
+const OFFLINE_CONFLICT_NOTE = "\n\n⚠️ إنت أوفلاين: فحص التعارض اتعمل على المواعيد اللي على موبايلك بس. لو حد تاني ضاف موعد وهو أوفلاين برضو، مش هيبان غير لما النت يرجع. والموعد مش هيوصل للباقيين غير لما النت يرجع عندك.";
+
 async function askToSave(values) {
+  const offlineNote = isOffline() ? OFFLINE_CONFLICT_NOTE : "";
   const conflicts = candidatesFor(values)
     .flatMap((candidate) => findConflicts(candidate, data.appointments, data.exceptions, ignoreFor(values)))
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -356,7 +361,7 @@ async function askToSave(values) {
   if (conflicts.length) {
     const choice = await choiceDialog({
       title: "فيه تعارض مع مواعيد تانية",
-      message: `${summary(values)}\n\nالموعد ده بيتعارض مع:\n${conflictLines(conflicts)}`,
+      message: `${summary(values)}\n\nالموعد ده بيتعارض مع:\n${conflictLines(conflicts)}${offlineNote}`,
       choices: [{ label: "احفظ برضو", value: "save", style: "btn-warning" }]
     });
     return choice === "save";
@@ -364,7 +369,7 @@ async function askToSave(values) {
 
   return confirmDialog({
     title: scope === "new" ? "تأكيد إضافة الموعد" : "تأكيد تعديل الموعد",
-    message: summary(values),
+    message: summary(values) + offlineNote,
     confirmText: scope === "new" ? "إضافة" : "حفظ التعديل"
   });
 }

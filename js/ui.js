@@ -21,6 +21,11 @@ export function hideAlert(container) {
   container.classList.add("d-none");
 }
 
+// علامة على أي حاجة اتعدلت على الجهاز ولسه ماوصلتش للباقيين
+export function pendingBadge() {
+  return '<span class="badge pending-badge"><i class="bi bi-cloud-arrow-up"></i> لسه ماتبعتش</span>';
+}
+
 export function setLoading(button, loading, loadingText = "استنى...") {
   if (loading) {
     button.dataset.originalText = button.textContent;

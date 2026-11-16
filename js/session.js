@@ -1,5 +1,6 @@
 // تحميل بيانات المستخدم الحالي: حسابه، عضويته في العيلة، دوره، وهل هو صاحب السيستم (أدمن)
 import { auth, db, onAuthStateChanged, signOut, doc, getDoc } from "./firebase.js";
+import { isOffline } from "./offline.js";
 
 function waitForUser() {
   return new Promise((resolve) => {
@@ -66,7 +67,17 @@ export async function requireSession({ roles } = {}) {
     return stop();
   }
 
-  const session = await loadSession(user);
+  let session;
+  try {
+    session = await loadSession(user);
+  } catch (error) {
+    // أوفلاين ومفيش بيانات متخزنة على الجهاز لسه
+    if (isOffline() || error?.code === "unavailable") {
+      location.replace("offline.html");
+      return stop();
+    }
+    throw error;
+  }
 
   if (session.disabled) return leave("disabled");
   if (session.familySuspended) return leave("family-suspended");

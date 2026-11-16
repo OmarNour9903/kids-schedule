@@ -43,6 +43,11 @@ export function renderNav(session) {
           ${canManageMembers ? link("places.html", "الأماكن") : ""}
           ${canManageMembers ? link("members.html", "الأعضاء") : ""}
           ${session.isAdmin ? link("admin.html", "لوحة التحكم") : ""}
+          <li class="nav-item">
+            <button type="button" class="nav-link install-app-btn" data-install-app>
+              <i class="bi bi-download"></i> تحميل الأبلكيشن
+            </button>
+          </li>
         </ul>
         <div class="d-flex align-items-center gap-2 py-2 py-md-0 ms-md-2">
           <span class="navbar-text small">

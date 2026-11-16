@@ -57,6 +57,11 @@ function ensureModal() {
         </div>
         <div class="modal-body d-grid gap-3">
 
+          <div class="alert alert-warning small mb-0 d-none" data-offline-note>
+            <i class="bi bi-wifi-off"></i> إنت أوفلاين: البحث بالاسم والخريطة محتاجين نت.
+            تقدر تلصق لينك المكان من Google Maps أو الإحداثيات (تحت) وتحفظه، أو تختار من الأماكن المحفوظة.
+          </div>
+
           <p class="small mb-0">
             3 طرق: <strong>ابحث بالاسم</strong>، أو <strong>دوس على الخريطة</strong>،
             أو <strong>هات اللينك من Google Maps</strong> (تحت الخريطة).
@@ -181,6 +186,10 @@ async function search() {
   const q = el("search").value.trim();
   const results = el("results");
   if (!q) return;
+  if (!navigator.onLine) {
+    results.innerHTML = '<div class="list-group-item small text-danger">البحث محتاج نت. الصق لينك من Google Maps أو اختار من الأماكن المحفوظة.</div>';
+    return;
+  }
   results.innerHTML = '<div class="list-group-item small text-muted">بيدوّر...</div>';
   try {
     const params = new URLSearchParams({ format: "jsonv2", q, countrycodes: "eg", "accept-language": "ar", limit: "6" });
@@ -243,6 +252,7 @@ export function openMapPicker({ lat, lng, name = "", mapsUrl = null, showSave = 
   el("save-wrap").classList.toggle("d-none", !showSave);
   el("search").value = "";
   el("results").innerHTML = "";
+  el("offline-note").classList.toggle("d-none", navigator.onLine);
   el("paste").value = mapsUrl || "";
   picked = lat != null ? { lat, lng } : null;
   pickedUrl = mapsUrl || null;
@@ -322,6 +332,12 @@ export function openMapPicker({ lat, lng, name = "", mapsUrl = null, showSave = 
 export function showPlacesMap(container, places) {
   const valid = places.filter((p) => p && p.lat != null);
   if (!valid.length) return null;
+  // من غير نت الخريطة مش هتحمّل، فبنكتب ده بدل مساحة فاضية
+  if (!navigator.onLine) {
+    container.innerHTML = '<div class="map-offline small text-muted"><i class="bi bi-wifi-off"></i> الخريطة محتاجة نت. لينكات Google Maps شغالة وبتفتح في أبلكيشن الخرايط.</div>';
+    return null;
+  }
+  container.querySelector(".map-offline")?.remove();
   const view = createMap(container, { scrollWheelZoom: false });
   const markers = valid.map((p) => L.marker([p.lat, p.lng]).addTo(view).bindPopup(escapeHtml(p.label || p.name)));
   if (markers.length === 1) view.setView(markers[0].getLatLng(), 16);

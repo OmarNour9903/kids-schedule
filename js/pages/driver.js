@@ -1,8 +1,9 @@
 // شاشة السواق: مشاوير يوم واحد (النهارده افتراضياً) وأزرار الحالة لكل مشوار
 import { requireSession } from "../session.js";
 import { renderNav } from "../nav.js";
-import { escapeHtml, showAlert, hideAlert, revealPage } from "../ui.js";
-import { watchFamilyData, childNames } from "../data.js";
+import { escapeHtml, showAlert, hideAlert, revealPage, pendingBadge } from "../ui.js";
+import { watchFamilyData, childNames, isLegPending } from "../data.js";
+import { offlineRangeNote } from "../offline.js";
 import { legsInRange } from "../schedule.js";
 import { todayKey, addDays, formatDayLong, formatTime } from "../dates.js";
 import { mapsLink } from "../map-picker.js";
@@ -59,7 +60,10 @@ function cardHtml(leg) {
             <span class="fs-5 fw-bold"><bdi>${formatTime(leg.time)}</bdi></span>
             ${legBadge}
           </span>
-          <span class="badge ${status.badge}">${status.label}</span>
+          <span class="d-flex flex-wrap justify-content-end gap-1">
+            ${isLegPending(leg, data) ? pendingBadge() : ""}
+            <span class="badge ${status.badge}">${status.label}</span>
+          </span>
         </div>
         <div class="fw-semibold">${escapeHtml(childNames(d.childIds, data.children))}${d.type === "extra" ? ` <span class="badge text-bg-warning">${APPOINTMENT_TYPES.extra}</span>` : ""}</div>
         ${travelLine}
@@ -83,10 +87,15 @@ function render() {
 
   current = legsInRange(data.appointments, data.exceptions, day, day)
     .filter((leg) => isAssignedTo(leg, user.uid));
-  listEl.innerHTML = current.length
-    ? current.map(cardHtml).join("")
-    : '<div class="card shadow-sm"><div class="card-body text-center text-muted py-5">مفيش مشاوير اليوم ده.</div></div>';
+  const note = offlineRangeNote(day);
+  listEl.innerHTML = (note ? `<div class="alert alert-warning small mb-0">${note}</div>` : "")
+    + (current.length
+      ? current.map(cardHtml).join("")
+      : '<div class="card shadow-sm"><div class="card-body text-center text-muted py-5">مفيش مشاوير اليوم ده.</div></div>');
 }
+
+// النت قطع أو رجع: نحدّث تنبيه الأيام المضمونة أوفلاين
+["online", "offline"].forEach((name) => window.addEventListener(name, () => { if (data) render(); }));
 
 function goTo(newDay) {
   day = newDay;

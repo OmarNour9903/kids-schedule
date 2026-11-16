@@ -5,8 +5,9 @@ import {
 } from "../firebase.js";
 import { requireSession } from "../session.js";
 import { renderNav } from "../nav.js";
-import { escapeHtml, showAlert, hideAlert, confirmDialog, choiceDialog, revealPage } from "../ui.js";
-import { watchFamilyData, childNames } from "../data.js";
+import { escapeHtml, showAlert, hideAlert, confirmDialog, choiceDialog, revealPage, pendingBadge } from "../ui.js";
+import { watchFamilyData, childNames, isLegPending } from "../data.js";
+import { isPendingDoc } from "../offline.js";
 import { occurrencesInRange, exceptionId, planGroupChange, legsOf } from "../schedule.js";
 import { addDays, daysBetween, formatDayLong, formatTime, weekdayName } from "../dates.js";
 import { showPlacesMap, mapsLink } from "../map-picker.js";
@@ -132,7 +133,7 @@ function legStatusHtml(leg) {
     <div class="leg-status">
       <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
         <span class="fw-semibold">${title} <bdi>${formatTime(leg.time)}</bdi></span>
-        <span class="badge ${status.badge}">${status.label}</span>
+        <span class="d-flex flex-wrap gap-1">${isLegPending(leg, familyState) ? pendingBadge() : ""}<span class="badge ${status.badge}">${status.label}</span></span>
       </div>
       <div class="small text-muted mb-2">${escapeHtml(leg.from?.name || "")} ← ${escapeHtml(leg.to?.name || "")}${leg.driverId ? ` · السواق: ${escapeHtml(driverName(leg.driverId))}` : ""}</div>
       ${declined ? `<div class="alert alert-danger py-2 mb-2"><strong>السواق اعتذر.</strong> السبب: ${escapeHtml(leg.declineReason || "-")}${canManage ? "<br>تقدر تعدّل الموعد، أو تلغيه، أو تعيّن سواق تاني للمشوار ده." : ""}</div>` : ""}
@@ -162,7 +163,10 @@ function renderStatus(occ) {
     </li>`).join("");
 }
 
+let familyState = {};
+
 function render(state) {
+  familyState = state;
   children = state.children;
   const appointment = state.appointments.find((a) => a.id === id);
   groupMembers = appointment?.groupId
@@ -377,7 +381,7 @@ function commentHtml(c) {
     <li class="comment${mine ? " mine" : ""}">
       <div class="d-flex justify-content-between gap-2 small">
         <span class="fw-semibold">${escapeHtml(c.authorName)}</span>
-        <span class="text-muted">${formatStamp(c.clientAt)}
+        <span class="text-muted">${c.pending ? pendingBadge() : ""} ${formatStamp(c.clientAt)}
           ${mine ? `<button type="button" class="btn btn-link btn-sm p-0 text-danger ms-1" data-delete-comment="${c.id}" aria-label="مسح التعليق"><i class="bi bi-trash"></i></button>` : ""}
         </span>
       </div>
@@ -389,8 +393,8 @@ let comments = [];
 
 function watchComments() {
   const q = query(commentsRef, where("appointmentId", "==", id), where("date", "==", date));
-  onSnapshot(q, (snapshot) => {
-    comments = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+  onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
+    comments = snapshot.docs.map((d) => ({ id: d.id, ...d.data(), pending: isPendingDoc(d) }))
       .filter((c) => !c.deleted)
       .sort((a, b) => (a.clientAt || "").localeCompare(b.clientAt || ""));
     commentsList.innerHTML = comments.length
