@@ -155,7 +155,7 @@ service cloud.firestore {
           && request.resource.data.name is string
           && (request.resource.data.lat is number || request.resource.data.lat == null)
           && (request.resource.data.lng is number || request.resource.data.lng == null)
-          && (request.resource.data.lat != null || request.resource.data.get('mapsUrl', null) is string))
+          && (request.resource.data.get('mapsUrl', null) is string || request.resource.data.get('mapsUrl', null) == null))
           || (isAdmin() && onlyChanged(softDeleteKeys()));
         allow delete: if false;
       }

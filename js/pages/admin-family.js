@@ -62,7 +62,9 @@ function apptLabel(a) {
 
 function placeLink(place) {
   if (!place) return "-";
-  return `<a href="${escapeHtml(mapsLink(place))}" target="_blank" rel="noopener">${escapeHtml(place.name)}</a>`;
+  const link = mapsLink(place);
+  if (!link) return escapeHtml(place.name);
+  return `<a href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(place.name)}</a>`;
 }
 
 // ---------- نظرة عامة ----------

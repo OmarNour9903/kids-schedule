@@ -189,7 +189,7 @@ function fillPlaceSelect(select, key) {
   if (current && placeValue(current) === "current") {
     options.push(`<option value="current">${escapeHtml(current.name)} (مكان مش محفوظ)</option>`);
   }
-  options.push(`<option value="${MAP_VALUE}">+ مكان جديد من الخريطة...</option>`);
+  options.push(`<option value="${MAP_VALUE}">+ مكان جديد...</option>`);
   select.innerHTML = options.join("");
   select.value = placeValue(current);
   select.dataset.previous = select.value;

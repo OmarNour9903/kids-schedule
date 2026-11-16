@@ -58,7 +58,9 @@ const whenText = () => `${formatDayLong(date)} الساعة ${formatTime(current
 
 function placeHtml(place) {
   if (!place) return "-";
-  return `${escapeHtml(place.name)} <a class="small" href="${mapsLink(place)}" target="_blank" rel="noopener">(افتح الخريطة)</a>`;
+  const link = mapsLink(place);
+  if (!link) return escapeHtml(place.name);
+  return `${escapeHtml(place.name)} <a class="small" href="${escapeHtml(link)}" target="_blank" rel="noopener">(افتح الخريطة)</a>`;
 }
 
 function formatStamp(iso) {

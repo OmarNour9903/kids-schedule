@@ -19,8 +19,9 @@ function itemHtml(place) {
     <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
       <div>
         <div class="fw-semibold"><i class="bi bi-geo-alt-fill text-primary"></i> ${escapeHtml(place.name)}</div>
-        <a class="small" href="${mapsLink(place)}" target="_blank" rel="noopener">افتح في Google Maps</a>
-        ${place.lat == null ? '<span class="small text-muted"> · لينك بس، من غير نقطة على الخريطة</span>' : ""}
+        ${mapsLink(place)
+          ? `<a class="small" href="${escapeHtml(mapsLink(place))}" target="_blank" rel="noopener">افتح في Google Maps</a>`
+          : '<span class="small text-muted">من غير لوكيشن</span>'}
       </div>
       <div class="d-flex gap-2">
         <button type="button" class="btn btn-sm btn-outline-primary" data-action="edit" data-id="${place.id}">تعديل</button>

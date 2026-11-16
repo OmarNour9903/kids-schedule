@@ -1,12 +1,10 @@
-// اختيار مكان: خريطة واضحة (عادية أو قمر صناعي)، بحث بالاسم،
-// أو لصق لينك/إحداثيات من Google Maps.
+// اختيار مكان: اسم المكان (إجباري) + لوكيشن من Google Maps (اختياري).
+// اللوكيشن بيتجاب بلصق لينك المكان أو الإحداثيات من Google Maps.
 // openMapPicker بترجع { name, lat, lng, mapsUrl, save } أو null لو المستخدم رجع.
-// lat/lng ممكن يبقوا null لو المستخدم لصق لينك مختصر من غير ما يحدد نقطة.
+// lat/lng/mapsUrl بيبقوا null لو المكان اتحفظ بالاسم بس، أو lat/lng بس null لو اللينك مختصر.
+// createMap وshowPlacesMap لسه مستخدمين في عرض المكان في صفحة الموعد.
 import { escapeHtml } from "./ui.js";
 import { parseLocation } from "./maps-link.js";
-
-const DEFAULT_CENTER = [30.0444, 31.2357]; // القاهرة
-const SEARCH_URL = "https://nominatim.openstreetmap.org/search";
 
 function baseLayers() {
   return {
@@ -37,8 +35,6 @@ function createMap(container, options = {}) {
 }
 
 let modalEl = null;
-let map = null;
-let marker = null;
 let picked = null;
 let pickedUrl = null;
 
@@ -49,47 +45,23 @@ function ensureModal() {
   modalEl.tabIndex = -1;
   modalEl.setAttribute("aria-hidden", "true");
   modalEl.innerHTML = `
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
       <div class="modal-content">
         <div class="modal-header">
-          <h2 class="modal-title h5">حدد المكان</h2>
+          <h2 class="modal-title h5">المكان</h2>
           <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal" aria-label="إغلاق"></button>
         </div>
-        <div class="modal-body d-grid gap-3">
-
-          <div class="alert alert-warning small mb-0 d-none" data-offline-note>
-            <i class="bi bi-wifi-off"></i> إنت أوفلاين: البحث بالاسم والخريطة محتاجين نت.
-            تقدر تلصق لينك المكان من Google Maps أو الإحداثيات (تحت) وتحفظه، أو تختار من الأماكن المحفوظة.
-          </div>
-
-          <p class="small mb-0">
-            3 طرق: <strong>ابحث بالاسم</strong>، أو <strong>دوس على الخريطة</strong>،
-            أو <strong>هات اللينك من Google Maps</strong> (تحت الخريطة).
-          </p>
+        <div class="modal-body d-grid gap-3 align-content-start">
 
           <div>
-            <label class="form-label fw-semibold" for="map-search">1. ابحث بالاسم</label>
-            <div class="input-group">
-              <input type="search" class="form-control" id="map-search" placeholder="مثلاً: نادي الصيد الدقي" data-search>
-              <button type="button" class="btn btn-outline-primary" data-search-btn><i class="bi bi-search"></i> بحث</button>
-            </div>
-            <div class="list-group mt-1 map-search-results" data-results></div>
-          </div>
-
-          <div>
-            <div class="form-label fw-semibold">2. أو دوس على الخريطة في مكان النقطة بالظبط</div>
-            <div class="map-picker-map" data-map></div>
-            <div class="d-flex justify-content-between align-items-center gap-2 mt-1">
-              <span class="small text-muted">"قمر صناعي" من فوق الخريطة = تفاصيل أكتر.</span>
-              <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap" data-locate>
-                <i class="bi bi-crosshair"></i> موقعي الحالي
-              </button>
-            </div>
+            <label class="form-label fw-semibold" for="map-place-name">اسم المكان</label>
+            <input type="text" class="form-control" id="map-place-name" maxlength="60" placeholder="مثلاً: نادي الصيد" data-name>
+            <div class="invalid-feedback" data-error-name></div>
           </div>
 
           <div class="border border-primary-subtle rounded-3 p-3 bg-primary-subtle bg-opacity-25">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-              <span class="fw-semibold">3. أو هات المكان من Google Maps</span>
+              <span class="fw-semibold">اللوكيشن من Google Maps <span class="fw-normal text-muted small">(اختياري)</span></span>
               <a class="btn btn-sm btn-success" href="https://www.google.com/maps" target="_blank" rel="noopener" data-gmaps>
                 <i class="bi bi-box-arrow-up-left"></i> افتح Google Maps
               </a>
@@ -108,16 +80,13 @@ function ensureModal() {
             <div class="text-danger small mt-1 d-none" data-error-paste></div>
           </div>
 
-          <div>
-            <div class="alert alert-light border py-2 mb-0 small" data-picked>لسه ماحددتش مكان.</div>
-            <div class="alert alert-danger py-2 mt-2 mb-0 small d-none" data-error-place></div>
+          <div class="alert alert-light border py-2 mb-0 small d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span data-picked></span>
+            <button type="button" class="btn btn-sm btn-outline-danger d-none" data-clear-location>
+              <i class="bi bi-x-lg"></i> شيل اللوكيشن
+            </button>
           </div>
 
-          <div>
-            <label class="form-label fw-semibold" for="map-place-name">اسم المكان</label>
-            <input type="text" class="form-control" id="map-place-name" maxlength="60" placeholder="مثلاً: نادي الصيد" data-name>
-            <div class="invalid-feedback" data-error-name></div>
-          </div>
           <div class="form-check" data-save-wrap>
             <input class="form-check-input" type="checkbox" id="map-place-save" data-save checked>
             <label class="form-check-label" for="map-place-save">احفظه في الأماكن المحفوظة</label>
@@ -149,72 +118,33 @@ function showError(field, message) {
 }
 
 function clearErrors() {
-  ["paste", "place", "name"].forEach((f) => showError(f, ""));
+  ["paste", "name"].forEach((f) => showError(f, ""));
 }
 
-// زرار Google Maps بيفتح على اللي المستخدم كتبه في البحث، أو على النقطة اللي حددها
+// زرار Google Maps بيفتح على اسم المكان لو مكتوب، أو على اللوكيشن اللي اتحدد
 function updateGoogleLink() {
-  const q = el("search").value.trim();
+  const q = el("name").value.trim();
   let href = "https://www.google.com/maps/@30.0444,31.2357,12z";
-  if (q) href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
-  else if (picked) href = `https://www.google.com/maps/search/?api=1&query=${picked.lat},${picked.lng}`;
+  if (picked) href = `https://www.google.com/maps/search/?api=1&query=${picked.lat},${picked.lng}`;
+  else if (q) href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
   el("gmaps").href = href;
 }
 
 function updatePickedText() {
-  const box = el("picked");
-  if (picked) {
-    box.textContent = `المكان المحدد: نقطة على الخريطة (${picked.lat.toFixed(5)}, ${picked.lng.toFixed(5)})${pickedUrl ? " + لينك Google Maps" : ""}`;
-  } else if (pickedUrl) {
-    box.textContent = "المكان المحدد: لينك Google Maps. السواق هيفتحه في Google Maps على طول. لو عايز يظهر على خريطة السيستم كمان، دوس على مكانه في الخريطة.";
-  } else {
-    box.textContent = "لسه ماحددتش مكان.";
-  }
-}
-
-function setMarker(lat, lng, zoom) {
-  picked = { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) };
-  if (marker) marker.setLatLng([lat, lng]);
-  else marker = L.marker([lat, lng]).addTo(map);
-  if (zoom) map.setView([lat, lng], zoom);
-  updatePickedText();
+  let text = "من غير لوكيشن: المكان هيتحفظ بالاسم بس.";
+  if (picked) text = `فيه لوكيشن: (${picked.lat.toFixed(5)}, ${picked.lng.toFixed(5)})`;
+  else if (pickedUrl) text = "فيه لوكيشن: لينك Google Maps، السواق هيفتحه في Google Maps على طول.";
+  el("picked").textContent = text;
+  el("clear-location").classList.toggle("d-none", !picked && !pickedUrl);
   updateGoogleLink();
-  showError("place", "");
 }
 
-async function search() {
-  const q = el("search").value.trim();
-  const results = el("results");
-  if (!q) return;
-  if (!navigator.onLine) {
-    results.innerHTML = '<div class="list-group-item small text-danger">البحث محتاج نت. الصق لينك من Google Maps أو اختار من الأماكن المحفوظة.</div>';
-    return;
-  }
-  results.innerHTML = '<div class="list-group-item small text-muted">بيدوّر...</div>';
-  try {
-    const params = new URLSearchParams({ format: "jsonv2", q, countrycodes: "eg", "accept-language": "ar", limit: "6" });
-    const response = await fetch(`${SEARCH_URL}?${params}`, { headers: { Accept: "application/json" } });
-    const items = await response.json();
-    if (!items.length) {
-      results.innerHTML = '<div class="list-group-item small text-muted">مالقيناش نتايج. جرب اسم تاني، أو حدد من الخريطة، أو الصق لينك من Google Maps.</div>';
-      return;
-    }
-    results.innerHTML = items.map((item, i) => `
-      <button type="button" class="list-group-item list-group-item-action small" data-result="${i}">
-        <span class="fw-semibold d-block">${escapeHtml(item.name || item.display_name.split(",")[0])}</span>
-        <span class="text-muted">${escapeHtml(item.display_name)}</span>
-      </button>`).join("");
-    results.querySelectorAll("[data-result]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const item = items[Number(btn.dataset.result)];
-        setMarker(Number(item.lat), Number(item.lon), 17);
-        if (!el("name").value.trim()) el("name").value = item.name || item.display_name.split(",")[0];
-        results.innerHTML = "";
-      });
-    });
-  } catch (error) {
-    results.innerHTML = '<div class="list-group-item small text-danger">البحث مش شغال دلوقتي. حدد من الخريطة أو الصق لينك.</div>';
-  }
+function clearLocation() {
+  picked = null;
+  pickedUrl = null;
+  el("paste").value = "";
+  showError("paste", "");
+  updatePickedText();
 }
 
 function usePasted() {
@@ -224,13 +154,9 @@ function usePasted() {
     return;
   }
   pickedUrl = parsed.url || null;
+  picked = parsed.lat != null ? { lat: Number(parsed.lat.toFixed(6)), lng: Number(parsed.lng.toFixed(6)) } : null;
   showError("paste", "");
-  if (parsed.lat != null) {
-    setMarker(parsed.lat, parsed.lng, 17);
-  } else {
-    updatePickedText();
-    showError("place", "");
-  }
+  updatePickedText();
 }
 
 async function pasteFromClipboard() {
@@ -250,47 +176,25 @@ export function openMapPicker({ lat, lng, name = "", mapsUrl = null, showSave = 
   el("name").value = name;
   el("save").checked = true;
   el("save-wrap").classList.toggle("d-none", !showSave);
-  el("search").value = "";
-  el("results").innerHTML = "";
-  el("offline-note").classList.toggle("d-none", navigator.onLine);
   el("paste").value = mapsUrl || "";
   picked = lat != null ? { lat, lng } : null;
   pickedUrl = mapsUrl || null;
   clearErrors();
   updatePickedText();
-  updateGoogleLink();
 
   return new Promise((resolve) => {
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
     let result = null;
 
-    const onShown = () => {
-      const start = lat != null ? [lat, lng] : DEFAULT_CENTER;
-      const zoom = lat != null ? 17 : 11;
-      if (!map) {
-        map = createMap(el("map"));
-        map.on("click", (e) => setMarker(e.latlng.lat, e.latlng.lng));
-      }
-      map.setView(start, zoom);
-      map.invalidateSize();
-      if (marker) { marker.remove(); marker = null; }
-      if (lat != null) marker = L.marker([lat, lng]).addTo(map);
-    };
-
-    const onLocate = () => {
-      if (!navigator.geolocation) return;
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setMarker(pos.coords.latitude, pos.coords.longitude, 17),
-        () => showError("place", "ماقدرناش نوصل لموقعك. اسمح للمتصفح بالموقع، أو اختار من الخريطة.")
-      );
-    };
-    const onSearchKey = (e) => { if (e.key === "Enter") { e.preventDefault(); search(); } };
     const onPasteKey = (e) => { if (e.key === "Enter") { e.preventDefault(); usePasted(); } };
-    const onNameInput = () => { if (el("name").value.trim()) showError("name", ""); };
+    const onNameInput = () => {
+      if (el("name").value.trim()) showError("name", "");
+      updateGoogleLink();
+    };
 
+    // اللوكيشن اختياري، الاسم بس اللي لازم
     const onDone = () => {
       const placeName = el("name").value.trim();
-      if (!picked && !pickedUrl) return showError("place", "لسه ماحددتش المكان: ابحث بالاسم، أو دوس على الخريطة، أو هات اللينك من Google Maps.");
       if (!placeName) {
         el("name").focus();
         return showError("name", "اكتب اسم المكان.");
@@ -306,19 +210,15 @@ export function openMapPicker({ lat, lng, name = "", mapsUrl = null, showSave = 
     };
 
     const bindings = [
-      [el("locate"), "click", onLocate],
       [el("done"), "click", onDone],
-      [el("search-btn"), "click", search],
-      [el("search"), "keydown", onSearchKey],
       [el("paste-btn"), "click", usePasted],
       [el("paste"), "keydown", onPasteKey],
       [el("clipboard-btn"), "click", pasteFromClipboard],
-      [el("search"), "input", updateGoogleLink],
+      [el("clear-location"), "click", clearLocation],
       [el("name"), "input", onNameInput]
     ];
     bindings.forEach(([node, type, fn]) => node.addEventListener(type, fn));
 
-    modalEl.addEventListener("shown.bs.modal", onShown, { once: true });
     modalEl.addEventListener("hidden.bs.modal", () => {
       bindings.forEach(([node, type, fn]) => node.removeEventListener(type, fn));
       resolve(result);
@@ -345,8 +245,10 @@ export function showPlacesMap(container, places) {
   return view;
 }
 
-// لينك يفتح المكان في Google Maps: اللينك الأصلي لو موجود، غير كده بالإحداثيات
+// لينك يفتح المكان في Google Maps: اللينك الأصلي لو موجود، غير كده بالإحداثيات.
+// بترجع null لو المكان متسجل بالاسم بس.
 export function mapsLink(place) {
   if (place.mapsUrl) return place.mapsUrl;
+  if (place.lat == null) return null;
   return `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`;
 }

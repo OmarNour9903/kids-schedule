@@ -249,17 +249,6 @@ body {
   background-color: var(--bs-tertiary-bg);
 }
 
-/* الخرائط */
-.map-picker-map {
-  height: 240px;
-  border-radius: 0.6rem;
-}
-
-.map-search-results {
-  max-height: 220px;
-  overflow-y: auto;
-}
-
 /* لوحة التحكم */
 .admin-search {
   max-width: 280px;
@@ -299,11 +288,6 @@ body {
   .calendar-cell {
     border-radius: 0.45rem;
     font-size: 0.85rem;
-  }
-
-  .map-picker-map {
-    height: 24vh;
-    min-height: 170px;
   }
 }
 

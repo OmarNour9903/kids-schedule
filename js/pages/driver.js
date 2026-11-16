@@ -32,7 +32,9 @@ function placeLine(icon, label, place) {
     <div class="d-flex align-items-center gap-2">
       <i class="bi ${icon} text-primary"></i>
       <span class="text-muted small">${label}</span>
-      <a href="${mapsLink(place)}" target="_blank" rel="noopener" class="fw-semibold">${escapeHtml(place.name)}</a>
+      ${mapsLink(place)
+        ? `<a href="${escapeHtml(mapsLink(place))}" target="_blank" rel="noopener" class="fw-semibold">${escapeHtml(place.name)}</a>`
+        : `<span class="fw-semibold">${escapeHtml(place.name)}</span>`}
     </div>`;
 }
 
