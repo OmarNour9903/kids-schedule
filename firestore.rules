@@ -175,31 +175,47 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // اللي بيحصل في يوم معين من الموعد: تعديل، إلغاء، تعيين سواق، وحالة المشوار.
-      // الـ ID = appointmentId_date
-      // أولياء الأمر يعدلوا أي حاجة، والسواق يعدّل حالة المشوار بس
+      // اللي بيحصل في يوم معين من الموعد: تعديل، إلغاء، تعيين سواق، وحالة المشاوير.
+      // الـ ID = appointmentId_date. مشوار الذهاب: status / declineReason / driverId
+      // ومشوار العودة: returnStatus / returnDeclineReason / returnDriverId
+      // أولياء الأمر يعدلوا أي حاجة، والسواق يعدّل حالة المشوار المعيّن ليه بس
       match /occurrences/{occurrenceId} {
         function idMatches() {
           return occurrenceId == request.resource.data.appointmentId + '_' + request.resource.data.date;
         }
         function validStatus() {
-          return request.resource.data.status in ['scheduled', 'confirmed', 'arrived', 'picked', 'done', 'declined'];
+          let states = ['scheduled', 'confirmed', 'arrived', 'picked', 'done', 'declined'];
+          return request.resource.data.get('status', 'scheduled') in states
+            && request.resource.data.get('returnStatus', 'scheduled') in states;
         }
-        function driverKeys() {
-          return ['appointmentId', 'date', 'status', 'statusLog', 'declineReason', 'updatedBy', 'updatedAt'];
+        function commonKeys() {
+          return ['appointmentId', 'date', 'statusLog', 'updatedBy', 'updatedAt'];
+        }
+        function goKeys() {
+          return commonKeys().concat(['status', 'declineReason']);
+        }
+        function returnKeys() {
+          return commonKeys().concat(['returnStatus', 'returnDeclineReason']);
+        }
+        function changed() {
+          return request.resource.data.diff(resource.data).affectedKeys();
         }
 
         allow read: if isActiveMember(fid) || isAdmin();
         allow create: if idMatches() && (
           hasRole(fid, ['owner', 'parent'])
-          || (hasRole(fid, ['driver']) && request.resource.data.keys().hasOnly(driverKeys()) && validStatus())
+          || (hasRole(fid, ['driver'])
+            && request.resource.data.keys().hasOnly(goKeys().concat(['returnStatus', 'returnDeclineReason']))
+            && validStatus())
         );
         allow update: if idMatches() && (
           hasRole(fid, ['owner', 'parent'])
-          || (hasRole(fid, ['driver'])
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(driverKeys())
-            && validStatus()
-            && (!('driverId' in resource.data) || resource.data.driverId == request.auth.uid))
+          || (hasRole(fid, ['driver']) && validStatus() && (
+            (changed().hasOnly(goKeys())
+              && resource.data.get('driverId', request.auth.uid) == request.auth.uid)
+            || (changed().hasOnly(returnKeys())
+              && resource.data.get('returnDriverId', request.auth.uid) == request.auth.uid)
+          ))
         );
         allow delete: if false;
       }

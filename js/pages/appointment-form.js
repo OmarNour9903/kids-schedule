@@ -25,6 +25,7 @@ const childrenBox = document.getElementById("children-options");
 const childrenError = document.getElementById("children-error");
 const pickupSelect = document.getElementById("pickup");
 const dropoffSelect = document.getElementById("dropoff");
+const returnSelect = document.getElementById("returnPlace");
 const repeatHint = document.getElementById("repeat-hint");
 
 const appointmentsRef = collection(db, "families", familyId, "appointments");
@@ -128,7 +129,20 @@ function applyTypeUI() {
   form.travelReturnDate.required = travel;
   form.travelStay.required = travel;
   updateTravelDays();
+  updateReturnUI();
 }
+
+// لما ولي الأمر يحط معاد عودة، بيظهر سؤال: الساعة كام رايحين على فين؟
+function updateReturnUI() {
+  const show = selectedType() !== "travel" && Boolean(form.returnTime.value);
+  document.getElementById("return-place-field").classList.toggle("d-none", !show);
+  returnSelect.required = show;
+  if (show) {
+    document.getElementById("return-place-label").textContent = `الساعة ${formatTime(form.returnTime.value)} (العودة) رايحين على فين؟`;
+  }
+}
+form.returnTime.addEventListener("input", updateReturnUI);
+form.returnTime.addEventListener("change", updateReturnUI);
 
 form.date.addEventListener("change", () => { checkDateWeekday(); updateRepeatHint(); updateTravelDays(); });
 form.travelReturnDate.addEventListener("change", updateTravelDays);
@@ -151,7 +165,12 @@ if (!activeChildren.length) {
 // ---------- الأماكن ----------
 
 const MAP_VALUE = "__map";
-const placeChoices = { pickup: initial.pickup || null, dropoff: initial.dropoff || null };
+// المواعيد القديمة اللي ليها معاد عودة من غير مكان عودة: العودة على مكان الاستلام
+const placeChoices = {
+  pickup: initial.pickup || null,
+  dropoff: initial.dropoff || null,
+  returnPlace: initial.returnPlace || (initial.returnTime ? initial.pickup || null : null)
+};
 const placeById = new Map(data.places.map((p) => [p.id, p]));
 
 function placeValue(place) {
@@ -208,12 +227,15 @@ async function onPlaceChange(select, key) {
   placeChoices[key] = { placeId, name: result.name, lat: result.lat, lng: result.lng, mapsUrl: result.mapsUrl };
   fillPlaceSelect(pickupSelect, "pickup");
   fillPlaceSelect(dropoffSelect, "dropoff");
+  fillPlaceSelect(returnSelect, "returnPlace");
 }
 
 fillPlaceSelect(pickupSelect, "pickup");
 fillPlaceSelect(dropoffSelect, "dropoff");
+fillPlaceSelect(returnSelect, "returnPlace");
 pickupSelect.addEventListener("change", () => onPlaceChange(pickupSelect, "pickup"));
 dropoffSelect.addEventListener("change", () => onPlaceChange(dropoffSelect, "dropoff"));
+returnSelect.addEventListener("change", () => onPlaceChange(returnSelect, "returnPlace"));
 
 // ---------- الحفظ ----------
 
@@ -232,6 +254,7 @@ function readForm() {
     repeatWeekly: travel ? false : (scope === "new" || scope === "all" ? form.repeatWeekly.checked : Boolean(original?.repeatWeekly)),
     pickup: placeChoices.pickup,
     dropoff: placeChoices.dropoff,
+    returnPlace: travel || !form.returnTime.value ? null : placeChoices.returnPlace,
     notes: form.notes.value.trim(),
     travel: travel
       ? { returnDate: form.travelReturnDate.value, returnTime: form.travelReturnTime.value || null, stay: form.travelStay.value.trim() }
@@ -250,6 +273,7 @@ function validate(values) {
 
   pickupSelect.setCustomValidity(values.pickup ? "" : "required");
   dropoffSelect.setCustomValidity(values.dropoff ? "" : "required");
+  returnSelect.setCustomValidity(values.returnTime && !values.returnPlace ? "required" : "");
 
   childrenError.classList.toggle("d-none", values.childIds.length > 0);
   const noDays = scope === "new" && !values.travel && values.dates.length === 0;
@@ -273,8 +297,10 @@ function summary(values) {
       values.dates.length > 1
         ? `الأيام: ${values.dates.map(formatDayLong).join("، ")}${values.repeatWeekly ? " (وكل يوم يتكرر كل أسبوع)" : ""}`
         : `اليوم: ${formatDayLong(values.date)}${values.repeatWeekly ? ` (ويتكرر كل ${weekdayName(values.date)})` : ""}`,
-      `الذهاب: ${formatTime(values.startTime)}${values.returnTime ? ` · الرجوع: ${formatTime(values.returnTime)}` : ""}`,
-      `من: ${values.pickup.name} ← إلى: ${values.dropoff.name}`
+      `الذهاب الساعة ${formatTime(values.startTime)}: ${values.pickup.name} ← ${values.dropoff.name}`,
+      values.returnTime
+        ? `العودة الساعة ${formatTime(values.returnTime)}: ${values.dropoff.name} ← ${values.returnPlace.name}`
+        : "من غير عودة"
     ];
   if (scope !== "this") lines.unshift(`النوع: ${APPOINTMENT_TYPES[values.type]}`);
   if (scope === "this") lines.push(`\nالتعديل ده ${EDIT_SCOPES.this}.`);
@@ -287,7 +313,8 @@ function conflictLines(conflicts) {
   const shown = conflicts.slice(0, 5).map((c) => {
     const d = c.occurrence.data;
     const who = childNames(d.childIds, data.children);
-    return `• ${formatDayLong(c.date)} ${formatTime(d.startTime)}: ${who}${c.sameChild ? " (نفس الولد)" : ""}`;
+    const times = [d.startTime, d.returnTime].filter(Boolean).map(formatTime).join(" و");
+    return `• ${formatDayLong(c.date)} ${times}: ${who}${c.sameChild ? " (نفس الولد)" : ""}`;
   });
   if (conflicts.length > 5) shown.push(`• و${conflicts.length - 5} مواعيد تانية`);
   return shown.join("\n");
@@ -350,6 +377,7 @@ function appointmentFields(values) {
     returnTime: values.returnTime,
     pickup: values.pickup,
     dropoff: values.dropoff,
+    returnPlace: values.returnPlace,
     notes: values.notes,
     travel: values.travel
   };
@@ -424,9 +452,11 @@ async function save(values) {
   if (scope === "this") {
     const { type, travel, ...overrides } = appointmentFields(values);
     // لو السواق كان أكد أو اعتذر، التعديل بيرجّع الموعد "مجدول" عشان يأكده من جديد
-    const resetStatus = ["confirmed", "declined"].includes(exception?.status)
-      ? { status: "scheduled", declineReason: null }
-      : {};
+    // كل مشوار بيتراجع لوحده
+    const resetStatus = {
+      ...(["confirmed", "declined"].includes(exception?.status) ? { status: "scheduled", declineReason: null } : {}),
+      ...(["confirmed", "declined"].includes(exception?.returnStatus) ? { returnStatus: "scheduled", returnDeclineReason: null } : {})
+    };
     await setDoc(doc(db, "families", familyId, "occurrences", exceptionId(editId, occurrenceDate)), {
       appointmentId: editId,
       date: occurrenceDate,

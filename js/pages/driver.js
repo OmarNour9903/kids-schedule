@@ -3,11 +3,11 @@ import { requireSession } from "../session.js";
 import { renderNav } from "../nav.js";
 import { escapeHtml, showAlert, hideAlert, revealPage } from "../ui.js";
 import { watchFamilyData, childNames } from "../data.js";
-import { occurrencesInRange } from "../schedule.js";
+import { legsInRange } from "../schedule.js";
 import { todayKey, addDays, formatDayLong, formatTime } from "../dates.js";
 import { mapsLink } from "../map-picker.js";
 import { actionButtonsHtml, runDriverAction, isAssignedTo } from "../driver-actions.js";
-import { TRIP_STATUS, APPOINTMENT_TYPES, errorMessage } from "../strings.js";
+import { TRIP_STATUS, APPOINTMENT_TYPES, LEG_LABELS, errorMessage } from "../strings.js";
 
 const session = await requireSession();
 renderNav(session);
@@ -35,31 +35,40 @@ function placeLine(icon, label, place) {
     </div>`;
 }
 
-function cardHtml(occ) {
+// كارت لكل مشوار: الذهاب لوحده والعودة لوحدها، وكل واحد ليه حالته وأزراره
+function cardHtml(leg) {
+  const { occ } = leg;
   const d = occ.data;
-  const status = occ.cancelled ? { label: "ملغي", badge: "text-bg-secondary" } : TRIP_STATUS[occ.status];
+  const travel = d.type === "travel";
+  const status = occ.cancelled ? { label: "ملغي", badge: "text-bg-secondary" } : TRIP_STATUS[leg.status];
+  const legBadge = travel
+    ? `<span class="badge text-bg-dark">${APPOINTMENT_TYPES.travel}</span>`
+    : `<span class="badge ${leg.leg === "go" ? "text-bg-primary" : "text-bg-secondary"}">${LEG_LABELS[leg.leg]}</span>`;
   const travelLine = occ.travel
-    ? `<div class="small"><span class="badge text-bg-dark">${APPOINTMENT_TYPES.travel}</span> يوم ${occ.travel.day} من ${occ.travel.total}${d.travel?.stay ? ` · المبيت: ${escapeHtml(d.travel.stay)}` : ""}</div>`
+    ? `<div class="small">يوم ${occ.travel.day} من ${occ.travel.total}${d.travel?.stay ? ` · المبيت: ${escapeHtml(d.travel.stay)}` : ""}</div>`
     : "";
-  const reason = occ.status === "declined" && occ.exception?.declineReason
-    ? `<div class="small text-danger">سبب الاعتذار: ${escapeHtml(occ.exception.declineReason)}</div>`
+  const reason = leg.status === "declined" && leg.declineReason
+    ? `<div class="small text-danger">سبب الاعتذار: ${escapeHtml(leg.declineReason)}</div>`
     : "";
 
   return `
     <article class="card shadow-sm driver-card${occ.cancelled ? " cancelled" : ""}">
       <div class="card-body d-grid gap-2">
         <div class="d-flex justify-content-between align-items-center gap-2">
-          <span class="fs-5 fw-bold"><bdi>${formatTime(d.startTime)}</bdi>${d.returnTime ? ` <span class="fw-normal text-muted small">لحد</span> <bdi>${formatTime(d.returnTime)}</bdi>` : ""}</span>
+          <span class="d-flex align-items-center gap-2">
+            <span class="fs-5 fw-bold"><bdi>${formatTime(leg.time)}</bdi></span>
+            ${legBadge}
+          </span>
           <span class="badge ${status.badge}">${status.label}</span>
         </div>
         <div class="fw-semibold">${escapeHtml(childNames(d.childIds, data.children))}${d.type === "extra" ? ` <span class="badge text-bg-warning">${APPOINTMENT_TYPES.extra}</span>` : ""}</div>
         ${travelLine}
-        ${placeLine("bi-house", "استلام:", d.pickup)}
-        ${placeLine("bi-flag", d.type === "travel" ? "الوجهة:" : "توصيل:", d.dropoff)}
-        ${d.notes ? `<div class="small text-muted"><i class="bi bi-chat-left-text"></i> ${escapeHtml(d.notes)}</div>` : ""}
+        ${placeLine("bi-house", "استلام من:", leg.from)}
+        ${placeLine("bi-flag", travel ? "الوجهة:" : "توصيل لـ:", leg.to)}
+        ${d.notes ? `<div class="small text-muted"><i class="bi bi-sticky"></i> ${escapeHtml(d.notes)}</div>` : ""}
         ${reason}
         <div class="d-flex flex-wrap gap-2 mt-1">
-          ${actionButtonsHtml(occ)}
+          ${actionButtonsHtml(leg)}
           <a class="btn btn-sm btn-outline-secondary" href="appointment.html?id=${encodeURIComponent(occ.appointment.id)}&date=${occ.date}">التفاصيل والتعليقات</a>
         </div>
       </div>
@@ -72,8 +81,8 @@ function render() {
   dateEl.textContent = formatDayLong(day);
   todayBtn.classList.toggle("d-none", isToday);
 
-  current = occurrencesInRange(data.appointments, data.exceptions, day, day)
-    .filter((occ) => isAssignedTo(occ, user.uid));
+  current = legsInRange(data.appointments, data.exceptions, day, day)
+    .filter((leg) => isAssignedTo(leg, user.uid));
   listEl.innerHTML = current.length
     ? current.map(cardHtml).join("")
     : '<div class="card shadow-sm"><div class="card-body text-center text-muted py-5">مفيش مشاوير اليوم ده.</div></div>';
@@ -92,12 +101,13 @@ todayBtn.addEventListener("click", () => goTo(todayKey()));
 listEl.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-driver-action]");
   if (!button) return;
-  const occ = current.find((o) => o.appointment.id === decodeURIComponent(button.dataset.id) && o.date === button.dataset.date);
-  if (!occ) return;
+  const leg = current.find((l) => l.occ.appointment.id === decodeURIComponent(button.dataset.id)
+    && l.occ.date === button.dataset.date && l.leg === button.dataset.leg);
+  if (!leg) return;
   hideAlert(alertBox);
   button.disabled = true;
   try {
-    await runDriverAction(session, occ, button.dataset.driverAction, childNames(occ.data.childIds, data.children));
+    await runDriverAction(session, leg, button.dataset.driverAction, childNames(leg.occ.data.childIds, data.children));
   } catch (error) {
     showAlert(alertBox, errorMessage(error));
   }

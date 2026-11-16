@@ -7,12 +7,12 @@ import { requireSession } from "../session.js";
 import { renderNav } from "../nav.js";
 import { escapeHtml, showAlert, hideAlert, confirmDialog, choiceDialog, revealPage } from "../ui.js";
 import { watchFamilyData, childNames } from "../data.js";
-import { occurrencesInRange, exceptionId, planGroupChange } from "../schedule.js";
+import { occurrencesInRange, exceptionId, planGroupChange, legsOf } from "../schedule.js";
 import { addDays, daysBetween, formatDayLong, formatTime, weekdayName } from "../dates.js";
 import { showPlacesMap, mapsLink } from "../map-picker.js";
 import { actionButtonsHtml, runDriverAction, isAssignedTo } from "../driver-actions.js";
 import { notify } from "../notify.js";
-import { APPOINTMENT_TYPES, EDIT_SCOPES, MANAGER_ROLES, TRIP_STATUS, errorMessage } from "../strings.js";
+import { APPOINTMENT_TYPES, EDIT_SCOPES, MANAGER_ROLES, TRIP_STATUS, LEG_LABELS, errorMessage } from "../strings.js";
 
 const session = await requireSession();
 renderNav(session);
@@ -31,8 +31,7 @@ const cancelBtn = document.getElementById("cancel-btn");
 const restoreBtn = document.getElementById("restore-btn");
 const editBtn = document.getElementById("edit-btn");
 const statusCard = document.getElementById("status-card");
-const driverButtons = document.getElementById("driver-buttons");
-const assignBtn = document.getElementById("assign-btn");
+const legsStatus = document.getElementById("legs-status");
 const commentsCard = document.getElementById("comments-card");
 const commentsList = document.getElementById("comments-list");
 const commentForm = document.getElementById("comment-form");
@@ -47,6 +46,7 @@ const exceptionRef = doc(db, "families", familyId, "occurrences", exceptionId(id
 const commentsRef = collection(db, "families", familyId, "comments");
 
 let current = null;
+let currentLegs = [];
 let children = [];
 let groupMembers = [];
 let mapView = null;
@@ -92,10 +92,10 @@ function renderDetails(appointment, occ) {
       ["المبيت", escapeHtml(d.travel.stay || "-")]
     ]
     : [
-      ["معاد الذهاب", formatTime(d.startTime)],
-      ["معاد الرجوع", d.returnTime ? formatTime(d.returnTime) : "-"],
-      ["مكان الاستلام", placeHtml(d.pickup)],
-      ["مكان التوصيل", placeHtml(d.dropoff)]
+      ["الذهاب", `الساعة ${formatTime(d.startTime)}: ${placeHtml(d.pickup)} ← ${placeHtml(d.dropoff)}`],
+      ["العودة", d.returnTime
+        ? `الساعة ${formatTime(d.returnTime)}: ${placeHtml(d.dropoff)} ← ${placeHtml(d.returnPlace || d.pickup)}`
+        : "من غير عودة"]
     ];
   if (appointment.repeatWeekly && appointment.repeatUntil) rows.push(["آخر يوم في التكرار", formatDayLong(appointment.repeatUntil)]);
   if (d.notes) rows.push(["ملاحظات", escapeHtml(d.notes)]);
@@ -105,13 +105,14 @@ function renderDetails(appointment, occ) {
 
   card.classList.remove("d-none");
 
-  const newMapKey = JSON.stringify([d.pickup, d.dropoff]);
+  const newMapKey = JSON.stringify([d.pickup, d.dropoff, d.returnTime ? d.returnPlace : null]);
   if (newMapKey !== mapKey) {
     mapKey = newMapKey;
     if (mapView) mapView.remove();
     mapView = showPlacesMap(document.getElementById("details-map"), [
       d.pickup && { ...d.pickup, label: `${d.type === "travel" ? "التحرك" : "الاستلام"}: ${d.pickup.name}` },
-      d.dropoff && { ...d.dropoff, label: `${d.type === "travel" ? "الوجهة" : "التوصيل"}: ${d.dropoff.name}` }
+      d.dropoff && { ...d.dropoff, label: `${d.type === "travel" ? "الوجهة" : "التوصيل"}: ${d.dropoff.name}` },
+      d.returnTime && d.returnPlace && d.returnPlace.name !== d.pickup?.name && { ...d.returnPlace, label: `العودة: ${d.returnPlace.name}` }
     ]);
   }
 
@@ -121,29 +122,40 @@ function renderDetails(appointment, occ) {
   restoreBtn.classList.toggle("d-none", !occ.cancelled);
 }
 
+// حالة كل مشوار (ذهاب وعودة) لوحده: الحالة، سبب الاعتذار، أزرار السواق، وتعيين سواق
+function legStatusHtml(leg) {
+  const status = TRIP_STATUS[leg.status];
+  const declined = leg.status === "declined";
+  const title = leg.occ.data.type === "travel" ? APPOINTMENT_TYPES.travel : LEG_LABELS[leg.leg];
+  const canAssign = canManage && (declined || leg.driverId);
+  return `
+    <div class="leg-status">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
+        <span class="fw-semibold">${title} <bdi>${formatTime(leg.time)}</bdi></span>
+        <span class="badge ${status.badge}">${status.label}</span>
+      </div>
+      <div class="small text-muted mb-2">${escapeHtml(leg.from?.name || "")} ← ${escapeHtml(leg.to?.name || "")}${leg.driverId ? ` · السواق: ${escapeHtml(driverName(leg.driverId))}` : ""}</div>
+      ${declined ? `<div class="alert alert-danger py-2 mb-2"><strong>السواق اعتذر.</strong> السبب: ${escapeHtml(leg.declineReason || "-")}${canManage ? "<br>تقدر تعدّل الموعد، أو تلغيه، أو تعيّن سواق تاني للمشوار ده." : ""}</div>` : ""}
+      <div class="d-flex flex-wrap gap-2">
+        ${isDriver && isAssignedTo(leg, user.uid) ? actionButtonsHtml(leg) : ""}
+        ${canAssign ? `<button type="button" class="btn btn-sm btn-outline-primary" data-assign-leg="${leg.leg}"><i class="bi bi-person-gear"></i> تعيين سواق للمشوار ده</button>` : ""}
+      </div>
+    </div>`;
+}
+
+let driverNames = new Map();
+const driverName = (uid) => driverNames.get(uid) || "سواق";
+
 function renderStatus(occ) {
   statusCard.classList.toggle("d-none", occ.cancelled);
   if (occ.cancelled) return;
-
-  const status = TRIP_STATUS[occ.status];
-  const badge = document.getElementById("status-badge");
-  badge.className = `badge ${status.badge}`;
-  badge.textContent = status.label;
-
-  const declineBox = document.getElementById("decline-box");
-  const declined = occ.status === "declined";
-  declineBox.classList.toggle("d-none", !declined);
-  if (declined) {
-    declineBox.innerHTML = `<strong>السواق اعتذر.</strong> السبب: ${escapeHtml(occ.exception?.declineReason || "-")}`
-      + (canManage ? "<br>تقدر تعدّل الموعد، أو تلغيه، أو تعيّن سواق تاني." : "");
-  }
-
-  driverButtons.innerHTML = isDriver && isAssignedTo(occ, user.uid) ? actionButtonsHtml(occ) : "";
-  assignBtn.classList.toggle("d-none", !(canManage && (declined || occ.exception?.driverId)));
+  currentLegs = legsOf(occ);
+  legsStatus.innerHTML = currentLegs.map(legStatusHtml).join("");
 
   const log = (occ.exception?.statusLog || []).slice().sort((a, b) => a.at.localeCompare(b.at));
   document.getElementById("status-log").innerHTML = log.map((entry) => `
     <li>
+      ${entry.leg && currentLegs.length > 1 ? `<span class="badge text-bg-light">${LEG_LABELS[entry.leg]}</span>` : ""}
       <span class="fw-semibold">${TRIP_STATUS[entry.status]?.label || entry.status}</span>
       · ${escapeHtml(entry.byName || "")} · ${formatStamp(entry.at)}
       ${entry.reason ? `<span class="d-block">${escapeHtml(entry.reason)}</span>` : ""}
@@ -284,22 +296,31 @@ restoreBtn.addEventListener("click", async () => {
 
 // ---------- السواق ----------
 
-driverButtons.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-driver-action]");
-  if (!button || !current) return;
-  hideAlert(alertBox);
-  button.disabled = true;
-  try {
-    await runDriverAction(session, current, button.dataset.driverAction, whoText());
-  } catch (error) {
-    showAlert(alertBox, errorMessage(error));
-  }
-  button.disabled = false;
-});
+const LEG_FIELDS = {
+  go: { driver: "driverId", status: "status", reason: "declineReason" },
+  return: { driver: "returnDriverId", status: "returnStatus", reason: "returnDeclineReason" }
+};
 
-// ولي الأمر يعيّن سواق للموعد ده (مثلاً بعد اعتذار السواق الأساسي)
-assignBtn.addEventListener("click", async () => {
+legsStatus.addEventListener("click", async (event) => {
+  const actionBtn = event.target.closest("[data-driver-action]");
+  const assignBtn = event.target.closest("[data-assign-leg]");
+  if (!current || (!actionBtn && !assignBtn)) return;
   hideAlert(alertBox);
+
+  if (actionBtn) {
+    const leg = currentLegs.find((l) => l.leg === actionBtn.dataset.leg);
+    actionBtn.disabled = true;
+    try {
+      await runDriverAction(session, leg, actionBtn.dataset.driverAction, whoText());
+    } catch (error) {
+      showAlert(alertBox, errorMessage(error));
+    }
+    actionBtn.disabled = false;
+    return;
+  }
+
+  // ولي الأمر يعيّن سواق لمشوار معين (مثلاً بعد اعتذار السواق الأساسي)
+  const leg = currentLegs.find((l) => l.leg === assignBtn.dataset.assignLeg);
   let drivers = [];
   try {
     const snapshot = await getDocs(collection(db, "families", familyId, "members"));
@@ -314,30 +335,32 @@ assignBtn.addEventListener("click", async () => {
     return;
   }
 
+  const legText = `${LEG_LABELS[leg.leg]} ${whoText()}، ${formatDayLong(date)} الساعة ${formatTime(leg.time)}`;
   const driverId = await choiceDialog({
     title: "تعيين سواق",
-    message: `مين يعمل مشوار ${whoText()}، ${whenText()}؟\nالسواق اللي هتختاره هيوصله إشعار ولازم يأكد الموعد.`,
+    message: `مين يعمل مشوار ${legText}؟\nالسواق اللي هتختاره هيوصله إشعار ولازم يأكد المشوار.`,
     choices: drivers.map((dr) => ({ label: dr.name, value: dr.id, style: "btn-outline-primary" }))
   });
   if (!driverId) return;
   const driver = drivers.find((dr) => dr.id === driverId);
+  const f = LEG_FIELDS[leg.leg];
 
   try {
     await setDoc(exceptionRef, {
       appointmentId: id,
       date,
-      driverId,
-      status: "scheduled",
-      declineReason: null,
+      [f.driver]: driverId,
+      [f.status]: "scheduled",
+      [f.reason]: null,
       statusLog: arrayUnion({
-        status: "scheduled", at: new Date().toISOString(), by: user.uid, byName: member.name, reason: `اتعيّن ${driver.name}`
+        leg: leg.leg, status: "scheduled", at: new Date().toISOString(), by: user.uid, byName: member.name, reason: `اتعيّن ${driver.name}`
       }),
       updatedBy: user.uid,
       updatedAt: serverTimestamp()
     }, { merge: true });
     await notify(session, {
       audience: [driverId],
-      text: `اتعيّنت لمشوار ${whoText()}، ${whenText()}. أكّد الموعد من مشاويرك.`,
+      text: `اتعيّنت لمشوار ${legText}. أكّد المشوار من مشاويرك.`,
       appointmentId: id,
       date
     });
@@ -431,4 +454,9 @@ if (!id || !/^\d{4}-\d{2}-\d{2}$/.test(date || "")) {
     revealPage();
   });
   watchComments();
+  // أسماء السواقين عشان نكتب مين المعيّن لكل مشوار
+  getDocs(collection(db, "families", familyId, "members")).then((snapshot) => {
+    driverNames = new Map(snapshot.docs.map((d) => [d.id, d.data().name]));
+    if (current) renderStatus(current);
+  }).catch(() => {});
 }

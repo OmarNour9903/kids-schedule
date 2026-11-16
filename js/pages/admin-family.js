@@ -7,10 +7,10 @@ import { requireAdmin } from "../session.js";
 import { renderAdminNav, formatDate } from "../admin-nav.js";
 import { escapeHtml, showAlert, hideAlert, confirmDialog, revealPage } from "../ui.js";
 import { childNames } from "../data.js";
-import { occurrencesInRange, exceptionId } from "../schedule.js";
+import { legsInRange, exceptionId } from "../schedule.js";
 import { todayKey, addDays, formatDayLong, formatTime, weekdayName } from "../dates.js";
 import { mapsLink } from "../map-picker.js";
-import { ROLE_LABELS, STATUS_LABELS, APPOINTMENT_TYPES, TRIP_STATUS, errorMessage } from "../strings.js";
+import { ROLE_LABELS, STATUS_LABELS, APPOINTMENT_TYPES, TRIP_STATUS, LEG_LABELS, errorMessage } from "../strings.js";
 
 // التحقق إن الحساب أدمن قبل ما أي حاجة من اللوحة تظهر
 const { user } = await requireAdmin();
@@ -156,7 +156,7 @@ function appointmentCard(a) {
   } else {
     when = formatDayLong(a.date);
   }
-  const time = `<bdi>${formatTime(a.startTime)}</bdi>${a.returnTime ? ` لحد <bdi>${formatTime(a.returnTime)}</bdi>` : ""}`;
+  const time = `ذهاب <bdi>${formatTime(a.startTime)}</bdi>${a.returnTime ? ` · عودة <bdi>${formatTime(a.returnTime)}</bdi>` : ""}`;
 
   return `
     <div class="card shadow-sm${st !== "active" ? " opacity-75" : ""}">
@@ -166,7 +166,7 @@ function appointmentCard(a) {
           <span class="d-flex flex-wrap gap-1">${type}${groupSize > 1 ? badge(`مجموعة ${groupSize} أيام`, "text-bg-light") : ""}${stateBadge}</span>
         </div>
         <div class="small">${when} · ${time}</div>
-        <div class="small">${placeLink(a.pickup)} ← ${placeLink(a.dropoff)}</div>
+        <div class="small">${placeLink(a.pickup)} ← ${placeLink(a.dropoff)}${a.returnTime ? ` ← ${placeLink(a.returnPlace || a.pickup)}` : ""}</div>
         ${a.notes ? `<div class="small text-muted">${escapeHtml(a.notes)}</div>` : ""}
         <div class="small text-muted">أضافه ${escapeHtml(nameOf(a.createdBy))} · ${formatDate(a.createdAt)}${a.updatedBy && a.updatedBy !== a.createdBy ? ` · آخر تعديل ${escapeHtml(nameOf(a.updatedBy))}` : ""}</div>
       </div>
@@ -198,26 +198,27 @@ function renderSchedule() {
   const today = todayKey();
   const from = addDays(today, -7);
   const to = addDays(today, 14);
-  const occurrences = occurrencesInRange(state.appointments, state.exceptions, from, to);
-  const days = [...new Set(occurrences.map((o) => o.date))];
+  const legs = legsInRange(state.appointments, state.exceptions, from, to);
+  const days = [...new Set(legs.map((l) => l.occ.date))];
 
   $("schedule-list").innerHTML = days.length ? days.map((day) => `
     <div>
       <h3 class="h6 fw-semibold mb-2">${formatDayLong(day)}${day === today ? ` ${badge("النهارده", "text-bg-primary")}` : ""}</h3>
       <ul class="list-group shadow-sm">
-        ${occurrences.filter((o) => o.date === day).map((o) => {
+        ${legs.filter((l) => l.occ.date === day).map((l) => {
+          const o = l.occ;
           const d = o.data;
-          const status = o.cancelled ? badge("ملغي", "text-bg-secondary") : badge(TRIP_STATUS[o.status].label, TRIP_STATUS[o.status].badge);
-          const driver = o.exception?.driverId ? ` · السواق: ${escapeHtml(nameOf(o.exception.driverId))}` : "";
-          const reason = o.status === "declined" && o.exception?.declineReason ? `<div class="small text-danger">سبب الاعتذار: ${escapeHtml(o.exception.declineReason)}</div>` : "";
-          const travel = o.travel ? ` · سفر يوم ${o.travel.day} من ${o.travel.total}` : "";
+          const status = o.cancelled ? badge("ملغي", "text-bg-secondary") : badge(TRIP_STATUS[l.status].label, TRIP_STATUS[l.status].badge);
+          const legName = d.type === "travel" ? `سفر يوم ${o.travel?.day} من ${o.travel?.total}` : LEG_LABELS[l.leg];
+          const driver = l.driverId ? ` · السواق: ${escapeHtml(nameOf(l.driverId))}` : "";
+          const reason = l.status === "declined" && l.declineReason ? `<div class="small text-danger">سبب الاعتذار: ${escapeHtml(l.declineReason)}</div>` : "";
           return `
             <li class="list-group-item${o.cancelled ? " text-muted" : ""}">
               <div class="d-flex flex-wrap justify-content-between gap-2">
-                <span><bdi class="fw-bold">${formatTime(d.startTime)}</bdi> · ${escapeHtml(childNames(d.childIds, state.children))}${travel}</span>
+                <span><bdi class="fw-bold">${formatTime(l.time)}</bdi> · ${legName} · ${escapeHtml(childNames(d.childIds, state.children))}</span>
                 ${status}
               </div>
-              <div class="small">${placeLink(d.pickup)} ← ${placeLink(d.dropoff)}${driver}</div>
+              <div class="small">${placeLink(l.from)} ← ${placeLink(l.to)}${driver}</div>
               ${reason}
             </li>`;
         }).join("")}

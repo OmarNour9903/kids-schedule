@@ -3,6 +3,7 @@ import { db, collection, query, where, onSnapshot } from "./firebase.js";
 import { escapeHtml } from "./ui.js";
 import { ROLE_LABELS } from "./strings.js";
 import { logout } from "./session.js";
+import { showWhatsNew } from "./whats-new.js";
 
 export function renderNav(session) {
   const nav = document.getElementById("app-nav");
@@ -54,6 +55,9 @@ export function renderNav(session) {
     </div>`;
 
   document.getElementById("logout-btn").addEventListener("click", logout);
+
+  // تنبيه التحديثات الجديدة: مرة واحدة لكل مستخدم
+  showWhatsNew(session);
 
   const countEl = document.getElementById("nav-bell-count");
   const unread = query(collection(db, "users", user.uid, "notifications"), where("read", "==", false));

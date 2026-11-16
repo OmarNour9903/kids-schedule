@@ -59,7 +59,7 @@
             <div class="invalid-feedback">اختار المعاد</div>
           </div>
           <div class="col-6 col-md-4" id="return-time-field">
-            <label for="returnTime" class="form-label fw-semibold">معاد الرجوع <span class="text-muted small">(اختياري)</span></label>
+            <label for="returnTime" class="form-label fw-semibold">معاد العودة <span class="text-muted small">(اختياري)</span></label>
             <input type="time" class="form-control" id="returnTime" name="returnTime">
             <div class="invalid-feedback">لازم يبقى بعد معاد الذهاب</div>
           </div>
@@ -109,6 +109,13 @@
             <select class="form-select" id="dropoff" name="dropoff" required></select>
             <div class="invalid-feedback">اختار مكان التوصيل</div>
           </div>
+        </div>
+
+        <div class="return-place-box d-none" id="return-place-field">
+          <label for="returnPlace" class="form-label fw-semibold" id="return-place-label">العودة رايحين على فين؟</label>
+          <select class="form-select" id="returnPlace" name="returnPlace"></select>
+          <div class="invalid-feedback">اختار مكان العودة</div>
+          <div class="form-text">العودة هتبقى مشوار لوحده من مكان التوصيل للمكان ده. ممكن يكون البيت، أو أي مكان تاني زي النادي.</div>
         </div>
 
         <div>

@@ -203,6 +203,13 @@ body {
   opacity: 0.55;
 }
 
+/* حالة كل مشوار في صفحة الموعد */
+.leg-status {
+  padding: 0.75rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.6rem;
+}
+
 /* سجل حالة المشوار */
 .status-log {
   padding-inline-start: 1.1rem;
@@ -262,6 +269,14 @@ body {
   white-space: nowrap;
 }
 
+/* سؤال مكان العودة في فورم الموعد */
+.return-place-box {
+  padding: 0.75rem;
+  border: 1px solid var(--bs-primary-border-subtle);
+  border-radius: 0.6rem;
+  background-color: var(--bs-primary-bg-subtle);
+}
+
 /* اختيار أيام الأسبوع في الموعد الجديد */
 .weekday-picker .btn {
   min-width: 4.25rem;
@@ -290,4 +305,9 @@ body {
     height: 24vh;
     min-height: 170px;
   }
+}
+
+/* تنبيه التحديثات الجديدة */
+.whats-new-list li + li {
+  margin-top: 0.5rem;
 }

@@ -8,6 +8,7 @@ import {
 } from "../firebase.js";
 import { escapeHtml, showAlert, hideAlert, setLoading } from "../ui.js";
 import { ROLE_LABELS, errorMessage } from "../strings.js";
+import { APP_VERSION } from "../whats-new.js";
 
 const form = document.getElementById("signup-form");
 const alertBox = document.getElementById("signup-alert");
@@ -57,7 +58,7 @@ function buildNewFamilyBatch(uid, person, familyName) {
   batch.set(doc(db, "families", familyRef.id, "members", uid), {
     ...person, role: "owner", status: "active", joinedAt: serverTimestamp()
   });
-  batch.set(doc(db, "users", uid), { ...person, familyId: familyRef.id, createdAt: serverTimestamp() });
+  batch.set(doc(db, "users", uid), { ...person, familyId: familyRef.id, seenVersion: APP_VERSION, createdAt: serverTimestamp() });
   return batch;
 }
 
@@ -67,7 +68,7 @@ function buildInviteBatch(uid, person) {
   batch.set(doc(db, "families", invite.familyId, "members", uid), {
     ...person, role: invite.role, status: "active", inviteCode, joinedAt: serverTimestamp()
   });
-  batch.set(doc(db, "users", uid), { ...person, familyId: invite.familyId, createdAt: serverTimestamp() });
+  batch.set(doc(db, "users", uid), { ...person, familyId: invite.familyId, seenVersion: APP_VERSION, createdAt: serverTimestamp() });
   batch.update(doc(db, "invites", inviteCode), { usedBy: uid, usedAt: serverTimestamp() });
   return batch;
 }

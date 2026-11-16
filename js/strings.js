@@ -25,6 +25,12 @@ export const APPOINTMENT_TYPES = {
   travel: "سفر"
 };
 
+// المشوارين في الموعد الواحد
+export const LEG_LABELS = {
+  go: "ذهاب",
+  return: "عودة"
+};
+
 // حالات المشوار بالترتيب
 export const TRIP_STATUS = {
   scheduled: { label: "مجدول", badge: "text-bg-light" },

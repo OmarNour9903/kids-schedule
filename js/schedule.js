@@ -1,10 +1,7 @@
 // منطق المواعيد: تحويل الموعد الأصلي (ممكن يكون متكرر) لمواعيد فعلية في أيام محددة،
 // مع تطبيق التعديلات والإلغاءات الخاصة بيوم معين، وفحص التعارض.
 // الملف ده مش بيستخدم Firebase عشان يبقى سهل نختبره لوحده.
-import { addDays, weekdayOf, daysBetween, timeToMinutes } from "./dates.js";
-
-// مدة افتراضية للمشوار لو مفيش معاد رجوع، عشان نقدر نحسب التعارض
-export const DEFAULT_DURATION_MIN = 30;
+import { addDays, weekdayOf, daysBetween } from "./dates.js";
 
 export function exceptionId(appointmentId, date) {
   return `${appointmentId}_${date}`;
@@ -67,19 +64,53 @@ export function occurrencesInRange(appointments, exceptions, from, to) {
   );
 }
 
-function interval(data) {
-  const start = timeToMinutes(data.startTime);
-  let end = data.returnTime ? timeToMinutes(data.returnTime) : start + DEFAULT_DURATION_MIN;
-  if (end <= start) end = start + DEFAULT_DURATION_MIN;
-  return [start, end];
+// المعاد بيبقى مشوار ذهاب (startTime من pickup لـ dropoff)
+// ومشوار عودة اختياري (returnTime من dropoff لـ returnPlace، ولو مفيش returnPlace يبقى pickup)
+function legTimes(data) {
+  return [data.startTime, data.returnTime].filter(Boolean);
 }
 
-// السفر بياخد اليوم كله، فأي موعد في نفس اليوم بيتعارض معاه
+// التعارض = مشوار في نفس المعاد بالظبط في نفس اليوم.
+// السفر بياخد اليوم كله، فأي موعد في أيامه بيتعارض معاه
 export function overlaps(a, b) {
   if (a.type === "travel" || b.type === "travel") return true;
-  const [aStart, aEnd] = interval(a);
-  const [bStart, bEnd] = interval(b);
-  return aStart < bEnd && bStart < aEnd;
+  const bTimes = legTimes(b);
+  return legTimes(a).some((t) => bTimes.includes(t));
+}
+
+// مشاوير اليوم لموعد معين: الذهاب، والعودة لو ليها معاد.
+// كل مشوار ليه حالته وسببه والسواق المعيّن ليه
+export function legsOf(occ) {
+  const d = occ.data;
+  const ex = occ.exception || {};
+  const go = {
+    occ,
+    leg: "go",
+    time: d.startTime,
+    from: d.pickup,
+    to: d.dropoff,
+    status: ex.status || "scheduled",
+    declineReason: ex.declineReason || null,
+    driverId: ex.driverId || null
+  };
+  if (d.type === "travel" || !d.returnTime) return [go];
+  return [go, {
+    occ,
+    leg: "return",
+    time: d.returnTime,
+    from: d.dropoff,
+    to: d.returnPlace || d.pickup,
+    status: ex.returnStatus || "scheduled",
+    declineReason: ex.returnDeclineReason || null,
+    driverId: ex.returnDriverId || null
+  }];
+}
+
+// كل مشاوير الفترة مترتبة باليوم والمعاد
+export function legsInRange(appointments, exceptions, from, to) {
+  return occurrencesInRange(appointments, exceptions, from, to)
+    .flatMap(legsOf)
+    .sort((a, b) => a.occ.date.localeCompare(b.occ.date) || a.time.localeCompare(b.time));
 }
 
 // candidate: بيانات الموعد الجديد أو المعدّل (date, startTime, returnTime, childIds, repeatWeekly, repeatUntil)

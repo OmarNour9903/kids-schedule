@@ -4,9 +4,9 @@ import { requireSession } from "../session.js";
 import { renderNav } from "../nav.js";
 import { escapeHtml, showAlert, revealPage } from "../ui.js";
 import { watchFamilyData, childNames } from "../data.js";
-import { occurrencesInRange, exceptionId } from "../schedule.js";
+import { legsInRange, exceptionId } from "../schedule.js";
 import { toKey, todayKey, formatDayLong, formatTime, monthTitle } from "../dates.js";
-import { APPOINTMENT_TYPES, TRIP_STATUS, MANAGER_ROLES, errorMessage } from "../strings.js";
+import { APPOINTMENT_TYPES, TRIP_STATUS, LEG_LABELS, MANAGER_ROLES, errorMessage } from "../strings.js";
 
 const session = await requireSession();
 const { familyId, member } = session;
@@ -53,9 +53,9 @@ function renderCalendar() {
   monthTitleEl.textContent = monthTitle(viewYear, viewMonth);
 
   const counts = new Map();
-  occurrencesInRange(data.appointments, data.exceptions, from, to)
-    .filter((occ) => !occ.cancelled)
-    .forEach((occ) => counts.set(occ.date, (counts.get(occ.date) || 0) + 1));
+  legsInRange(data.appointments, data.exceptions, from, to)
+    .filter((leg) => !leg.occ.cancelled)
+    .forEach((leg) => counts.set(leg.occ.date, (counts.get(leg.occ.date) || 0) + 1));
 
   const leading = WEEK_ORDER.indexOf(first.getDay());
   const cells = Array.from({ length: leading }, () => '<div class="calendar-cell empty"></div>');
@@ -69,7 +69,7 @@ function renderCalendar() {
     if (key === selected) classes.push("selected");
     if (key < today) classes.push("past");
     cells.push(`
-      <button type="button" class="${classes.join(" ")}" data-date="${key}" aria-label="${formatDayLong(key)}، ${count} مواعيد">
+      <button type="button" class="${classes.join(" ")}" data-date="${key}" aria-label="${formatDayLong(key)}، ${count} مشاوير">
         <span class="calendar-day-number">${day}</span>
         ${count ? `<span class="calendar-count">${count}</span>` : ""}
       </button>`);
@@ -77,31 +77,31 @@ function renderCalendar() {
   daysEl.innerHTML = cells.join("");
 }
 
-function occurrenceItem(occ) {
+// كل مشوار (ذهاب أو عودة) بيظهر كبند لوحده في مواعيد اليوم
+function legItem(leg) {
+  const { occ } = leg;
   const d = occ.data;
-  const time = d.returnTime
-    ? `<bdi>${formatTime(d.startTime)}</bdi> <span class="fw-normal text-muted small">لحد</span> <bdi>${formatTime(d.returnTime)}</bdi>`
-    : `<bdi>${formatTime(d.startTime)}</bdi>`;
-  const typeBadge = d.type === "extra"
-    ? `<span class="badge text-bg-warning">${APPOINTMENT_TYPES.extra}</span>`
-    : (d.type === "travel" ? `<span class="badge text-bg-dark">${APPOINTMENT_TYPES.travel}${occ.travel ? ` ${occ.travel.day}/${occ.travel.total}` : ""}</span>` : "");
+  const legBadge = d.type === "travel"
+    ? `<span class="badge text-bg-dark">${APPOINTMENT_TYPES.travel}${occ.travel ? ` ${occ.travel.day}/${occ.travel.total}` : ""}</span>`
+    : `<span class="badge ${leg.leg === "go" ? "text-bg-primary" : "text-bg-secondary"}">${LEG_LABELS[leg.leg]}</span>`;
+  const typeBadge = d.type === "extra" ? `<span class="badge text-bg-warning">${APPOINTMENT_TYPES.extra}</span>` : "";
   const repeatIcon = occ.appointment.repeatWeekly ? '<i class="bi bi-arrow-repeat text-muted" title="متكرر كل أسبوع"></i>' : "";
   const editedBadge = occ.exception && occ.exception.overrides ? '<span class="badge text-bg-info">متعدّل اليوم ده</span>' : "";
   const cancelledBadge = occ.cancelled ? '<span class="badge text-bg-secondary">ملغي</span>' : "";
-  const statusBadge = !occ.cancelled && occ.status !== "scheduled"
-    ? `<span class="badge ${TRIP_STATUS[occ.status].badge}">${TRIP_STATUS[occ.status].label}</span>`
+  const statusBadge = !occ.cancelled && leg.status !== "scheduled"
+    ? `<span class="badge ${TRIP_STATUS[leg.status].badge}">${TRIP_STATUS[leg.status].label}</span>`
     : "";
 
   return `
     <li class="list-group-item p-0">
       <a class="appointment-item${occ.cancelled ? " cancelled" : ""}" href="appointment.html?id=${encodeURIComponent(occ.appointment.id)}&date=${occ.date}">
         <div class="d-flex justify-content-between align-items-center gap-2">
-          <span class="fw-bold">${time}</span>
+          <span class="d-flex align-items-center gap-2"><bdi class="fw-bold">${formatTime(leg.time)}</bdi>${legBadge}</span>
           <span class="d-flex flex-wrap justify-content-end gap-1 align-items-center">${repeatIcon}${typeBadge}${statusBadge}${editedBadge}${cancelledBadge}</span>
         </div>
         <div class="fw-semibold">${escapeHtml(childNames(d.childIds, data.children))}</div>
         <div class="small text-muted">
-          <i class="bi bi-geo-alt"></i> ${escapeHtml(d.pickup?.name || "")} ← ${escapeHtml(d.dropoff?.name || "")}
+          <i class="bi bi-geo-alt"></i> ${escapeHtml(leg.from?.name || "")} ← ${escapeHtml(leg.to?.name || "")}
         </div>
         ${d.notes ? `<div class="appointment-note small mt-1"><i class="bi bi-sticky"></i> ${escapeHtml(d.notes)}</div>` : ""}
         ${commentsHtml(occ)}
@@ -128,9 +128,9 @@ function commentsHtml(occ) {
 function renderDay() {
   dayTitleEl.textContent = formatDayLong(selected);
   addBtn.href = `appointment-form.html?date=${selected}`;
-  const list = occurrencesInRange(data.appointments, data.exceptions, selected, selected);
+  const list = legsInRange(data.appointments, data.exceptions, selected, selected);
   dayListEl.innerHTML = list.length
-    ? list.map(occurrenceItem).join("")
+    ? list.map(legItem).join("")
     : '<li class="list-group-item text-muted">مفيش مواعيد اليوم ده.</li>';
 }
 
