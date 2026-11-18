@@ -6,7 +6,7 @@ import { escapeHtml, showAlert, revealPage, pendingBadge } from "../ui.js";
 import { watchFamilyData, childNames, isLegPending, legStatusLabel } from "../data.js";
 import { offlineRangeNote } from "../offline.js";
 import { legsInRange, exceptionId, occurrencesInRange } from "../schedule.js";
-import { renderDayRing } from "../day-ring.js";
+import { renderDayRing, childColorIndexMap, childColorClass } from "../day-ring.js";
 import { toKey, todayKey, formatDayLong, formatTime, monthTitle } from "../dates.js";
 import { APPOINTMENT_TYPES, TRIP_STATUS, LEG_LABELS, MANAGER_ROLES, errorMessage } from "../strings.js";
 
@@ -95,14 +95,16 @@ function legItem(leg) {
     ? `<span class="badge ${TRIP_STATUS[leg.status].badge}">${escapeHtml(legStatusLabel(leg, data))}</span>`
     : "";
 
+  const stripe = childColorClass(familyId, d.childIds, childColorIndexMap([{ familyId, children: data.children }]));
+
   return `
     <li class="list-group-item p-0">
-      <a class="appointment-item${occ.cancelled ? " cancelled" : ""}" href="appointment.html?id=${encodeURIComponent(occ.appointment.id)}&date=${occ.date}">
+      <a class="appointment-item ${stripe}${occ.cancelled ? " cancelled" : ""}" href="appointment.html?id=${encodeURIComponent(occ.appointment.id)}&date=${occ.date}">
         <div class="d-flex justify-content-between align-items-center gap-2">
-          <span class="d-flex align-items-center gap-2"><bdi class="fw-bold">${formatTime(leg.time)}</bdi>${legBadge}</span>
+          <span class="d-flex align-items-center gap-2"><bdi class="leg-time">${formatTime(leg.time)}</bdi>${legBadge}</span>
           <span class="d-flex flex-wrap justify-content-end gap-1 align-items-center">${repeatIcon}${typeBadge}${statusBadge}${editedBadge}${cancelledBadge}${pending}</span>
         </div>
-        <div class="fw-semibold">${escapeHtml(childNames(d.childIds, data.children))}</div>
+        <div class="leg-kids">${escapeHtml(childNames(d.childIds, data.children))}</div>
         <div class="small text-muted">
           <i class="bi bi-geo-alt"></i> ${escapeHtml(leg.from?.name || "")} ← ${escapeHtml(leg.to?.name || "")}
         </div>

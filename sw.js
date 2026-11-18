@@ -3,7 +3,7 @@
 // - المكتبات (Bootstrap، Firebase، الخطوط): من النسخة المحفوظة الأول لأن روابطها فيها رقم الإصدار.
 // - بيانات Firebase نفسها مش بتعدي من هنا: Firebase بيخزنها لوحده على الجهاز.
 // لو ضفت صفحة أو ملف جديد: ضيفه في LOCAL وغيّر رقم CACHE.
-const CACHE = "kids-schedule-v6";
+const CACHE = "kids-schedule-v7";
 
 const LOCAL = [
   "./",

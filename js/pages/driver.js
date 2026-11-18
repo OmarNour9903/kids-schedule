@@ -7,7 +7,7 @@ import { escapeHtml, showAlert, hideAlert, revealPage, pendingBadge } from "../u
 import { watchFamilyData, childNames, isLegPending, legStatusLabel } from "../data.js";
 import { offlineRangeNote } from "../offline.js";
 import { legsInRange, occurrencesInRange, legsOf } from "../schedule.js";
-import { renderDayRing } from "../day-ring.js";
+import { renderDayRing, childColorIndexMap, childColorMap, childColorClass } from "../day-ring.js";
 import { todayKey, addDays, formatDayLong, formatTime, daysBetween } from "../dates.js";
 import { mapsLink } from "../map-picker.js";
 import { actionButtonsHtml, runDriverAction, isAssignedTo } from "../driver-actions.js";
@@ -114,11 +114,11 @@ function cardHtml(leg, conflict) {
     : "";
 
   return `
-    <article class="card shadow-sm driver-card${occ.cancelled ? " cancelled" : ""}">
+    <article class="card shadow-sm driver-card ${childColorClass(leg.familyId, d.childIds, childColorIndexMap(allColorFamilies()))}${occ.cancelled ? " cancelled" : ""}">
       <div class="card-body d-grid gap-2">
         <div class="d-flex justify-content-between align-items-center gap-2">
           <span class="d-flex align-items-center gap-2">
-            <span class="fs-5 fw-bold"><bdi>${formatTime(leg.time)}</bdi></span>
+            <span class="leg-time fs-5"><bdi>${formatTime(leg.time)}</bdi></span>
             ${legBadge}
           </span>
           <span class="d-flex flex-wrap justify-content-end gap-1">
@@ -128,10 +128,12 @@ function cardHtml(leg, conflict) {
         </div>
         ${multiFamily ? `<div><span class="badge text-bg-light border"><i class="bi bi-house-heart"></i> ${escapeHtml(familyById.get(leg.familyId).family.name)}</span></div>` : ""}
         ${conflict ? '<div class="alert alert-warning py-1 px-2 small mb-0"><i class="bi bi-exclamation-triangle"></i> فيه مشوار تاني في نفس المعاد</div>' : ""}
-        <div class="fw-semibold">${escapeHtml(childNames(d.childIds, data.children))}${d.type === "extra" ? ` <span class="badge text-bg-warning">${APPOINTMENT_TYPES.extra}</span>` : ""}</div>
+        <div class="leg-kids">${escapeHtml(childNames(d.childIds, data.children))}${d.type === "extra" ? ` <span class="badge text-bg-warning">${APPOINTMENT_TYPES.extra}</span>` : ""}</div>
         ${travelLine}
-        ${placeLine("bi-house", "استلام من:", leg.from)}
-        ${placeLine("bi-flag", travel ? "الوجهة:" : "توصيل لـ:", leg.to)}
+        <div class="route">
+          ${placeLine("bi-house", "استلام من:", leg.from)}
+          ${placeLine("bi-flag", travel ? "الوجهة:" : "توصيل لـ:", leg.to)}
+        </div>
         ${d.notes ? `<div class="small text-muted"><i class="bi bi-sticky"></i> ${escapeHtml(d.notes)}</div>` : ""}
         ${reason}
         <div class="d-flex flex-wrap gap-2 mt-1">
@@ -178,6 +180,11 @@ function dayHeading(date) {
   return `<h2 class="h6 fw-bold text-muted mb-0 mt-2">${prefix}${formatDayLong(date)}</h2>`;
 }
 
+// ألوان الأولاد محسوبة على كل الأسر، فمابتتغيرش لما فلتر الأسرة يتغير
+function allColorFamilies() {
+  return driverFamilies.map((f) => ({ familyId: f.id, children: states.get(f.id)?.children || [] }));
+}
+
 // الدايرة: يوم الفلتر لو "يوم"، والنهارده في باقي الفلاتر. فيها المواعيد اللي ليها مشوار للسواق ده، من كل الأسر
 function renderRing() {
   const ringDay = range === "day" ? day : todayKey();
@@ -191,7 +198,7 @@ function renderRing() {
       occurrences: occurrencesInRange(data.appointments, data.exceptions, ringDay, ringDay)
         .filter((occ) => legsOf(occ).some((leg) => isAssignedTo(leg, user.uid)))
     }));
-  renderDayRing(document.getElementById("day-ring"), { date: ringDay, families });
+  renderDayRing(document.getElementById("day-ring"), { date: ringDay, families, colors: childColorMap(allColorFamilies()) });
 }
 
 function render() {

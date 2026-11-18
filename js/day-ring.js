@@ -24,19 +24,32 @@ export function minutesToTime(minutes) {
 
 export const formatMinutes = (minutes) => formatTime(minutesToTime(minutes));
 
-// لون كل ولد بترتيب إضافته، فاللون مايتغيرش من يوم ليوم
-export function childColorMap(families) {
+// رقم لون كل ولد بترتيب إضافته، فاللون مايتغيرش من يوم ليوم.
+// نفس الرقم بيتستخدم في الدايرة وفي الخط الملون جنب كروت المواعيد (child-c0 .. child-c7 في css)
+export function childColorIndexMap(families) {
   const map = new Map();
   let index = 0;
   families.forEach(({ familyId, children }) => {
     [...children]
       .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0) || a.id.localeCompare(b.id))
       .forEach((child) => {
-        map.set(`${familyId}:${child.id}`, CHILD_COLORS[index % CHILD_COLORS.length]);
+        map.set(`${familyId}:${child.id}`, index % CHILD_COLORS.length);
         index += 1;
       });
   });
   return map;
+}
+
+export function childColorMap(families) {
+  return new Map([...childColorIndexMap(families)].map(([key, index]) => [key, CHILD_COLORS[index]]));
+}
+
+// كلاس الخط الملون للموعد: لون الولد، أو المشترك لو أكتر من ولد
+export function childColorClass(familyId, childIds, indexMap) {
+  const ids = childIds || [];
+  if (ids.length !== 1) return ids.length ? "child-shared" : "";
+  const index = indexMap.get(`${familyId}:${ids[0]}`);
+  return index == null ? "" : `child-c${index}`;
 }
 
 // من وإلى (بالدقايق) للموعد في اليوم ده، أو null لو برا الدايرة
@@ -254,10 +267,10 @@ function legendHtml(families, colors, multiFamily) {
     </div>`;
 }
 
-// families: [{ familyId, familyName, children, occurrences }] لليوم ده
-export function renderDayRing(container, { date, families }) {
+// families: [{ familyId, familyName, children, occurrences }] لليوم ده.
+// colors اختيارية: عشان الألوان تفضل ثابتة لما فلتر الأسرة يخفي أسرة
+export function renderDayRing(container, { date, families, colors = childColorMap(families) }) {
   const multiFamily = families.length > 1;
-  const colors = childColorMap(families);
   const items = families.flatMap((f) => ringItems(f.occurrences, f));
   const segments = buildSegments(items);
   const isToday = date === todayKey();
