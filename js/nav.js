@@ -66,6 +66,12 @@ export function renderNav(session) {
               <i class="bi bi-download"></i> تحميل الأبلكيشن
             </button>
           </li>
+          <li class="nav-item">
+            <button type="button" class="nav-link" data-theme-toggle>
+              <span class="theme-to-light"><i class="bi bi-sun"></i> الوضع الفاتح</span>
+              <span class="theme-to-dark"><i class="bi bi-moon-stars"></i> الوضع الغامق</span>
+            </button>
+          </li>
         </ul>
         <div class="d-flex align-items-center gap-2 py-2 py-md-0 ms-md-2">
           <span class="navbar-text small">

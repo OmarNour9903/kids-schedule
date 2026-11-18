@@ -6,7 +6,8 @@ import { renderNav } from "../nav.js";
 import { escapeHtml, showAlert, hideAlert, revealPage, pendingBadge } from "../ui.js";
 import { watchFamilyData, childNames, isLegPending, legStatusLabel } from "../data.js";
 import { offlineRangeNote } from "../offline.js";
-import { legsInRange } from "../schedule.js";
+import { legsInRange, occurrencesInRange, legsOf } from "../schedule.js";
+import { renderDayRing } from "../day-ring.js";
 import { todayKey, addDays, formatDayLong, formatTime, daysBetween } from "../dates.js";
 import { mapsLink } from "../map-picker.js";
 import { actionButtonsHtml, runDriverAction, isAssignedTo } from "../driver-actions.js";
@@ -177,7 +178,24 @@ function dayHeading(date) {
   return `<h2 class="h6 fw-bold text-muted mb-0 mt-2">${prefix}${formatDayLong(date)}</h2>`;
 }
 
+// الدايرة: يوم الفلتر لو "يوم"، والنهارده في باقي الفلاتر. فيها المواعيد اللي ليها مشوار للسواق ده، من كل الأسر
+function renderRing() {
+  const ringDay = range === "day" ? day : todayKey();
+  document.getElementById("ring-date").textContent = ringDay === todayKey() ? `النهارده · ${formatDayLong(ringDay)}` : formatDayLong(ringDay);
+  const families = [...states.entries()]
+    .filter(([familyId]) => familyFilter === "all" || familyId === familyFilter)
+    .map(([familyId, data]) => ({
+      familyId,
+      familyName: familyById.get(familyId).family.name,
+      children: data.children,
+      occurrences: occurrencesInRange(data.appointments, data.exceptions, ringDay, ringDay)
+        .filter((occ) => legsOf(occ).some((leg) => isAssignedTo(leg, user.uid)))
+    }));
+  renderDayRing(document.getElementById("day-ring"), { date: ringDay, families });
+}
+
 function render() {
+  renderRing();
   const isDay = range === "day";
   const isToday = day === todayKey();
   const { from, to } = rangeBounds();

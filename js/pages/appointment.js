@@ -146,7 +146,7 @@ function renderStatus(occ) {
   document.getElementById("status-log").innerHTML = log.map((entry) => `
     <li>
       ${entry.leg && currentLegs.length > 1 ? `<span class="badge text-bg-light">${LEG_LABELS[entry.leg]}</span>` : ""}
-      ${["confirmed", "arrived"].includes(entry.status) && entry.byName
+      ${["confirmed", "arrived", "declined"].includes(entry.status) && entry.byName
         ? `<span class="fw-semibold">${escapeHtml(statusText(entry.status, { by: entry.byName }))}</span>`
         : `<span class="fw-semibold">${escapeHtml(statusText(entry.status, { kids: entry.status === "picked" ? whoText() : "" }))}</span>
       · ${escapeHtml(entry.byName || "")}`} · ${formatStamp(entry.at)}

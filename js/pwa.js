@@ -89,6 +89,20 @@ document.addEventListener("click", async (event) => {
   if (isIos) showIosHelp();
 });
 
+// ---------- الإضاءة (غامق / فاتح) ----------
+// الاختيار الأول بيتعمل في theme.js، وهنا التبديل من زرار القايمة
+document.addEventListener("click", (event) => {
+  if (!event.target.closest("[data-theme-toggle]")) return;
+  const next = root.getAttribute("data-bs-theme") === "light" ? "dark" : "light";
+  root.setAttribute("data-bs-theme", next);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", next === "dark" ? "#131B2B" : "#0d6efd");
+  try {
+    localStorage.setItem("theme", next);
+  } catch (error) {
+    // التخزين مش متاح: الاختيار هيفضل لحد ما الصفحة تتقفل بس
+  }
+});
+
 // ---------- شريط حالة النت والإرسال ----------
 const banner = document.createElement("div");
 banner.className = "sync-banner d-none";

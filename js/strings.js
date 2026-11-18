@@ -46,6 +46,7 @@ export const TRIP_STATUS = {
 export function statusText(status, { by = "", kids = "" } = {}) {
   if (status === "confirmed" && by) return `مؤكد من ${by}`;
   if (status === "arrived" && by) return `${by} وصل`;
+  if (status === "declined" && by) return `اعتذر ${by}`;
   if (status === "picked" && kids) return `تم استلام ${kids}`;
   return TRIP_STATUS[status]?.label || status;
 }

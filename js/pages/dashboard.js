@@ -5,7 +5,8 @@ import { renderNav } from "../nav.js";
 import { escapeHtml, showAlert, revealPage, pendingBadge } from "../ui.js";
 import { watchFamilyData, childNames, isLegPending, legStatusLabel } from "../data.js";
 import { offlineRangeNote } from "../offline.js";
-import { legsInRange, exceptionId } from "../schedule.js";
+import { legsInRange, exceptionId, occurrencesInRange } from "../schedule.js";
+import { renderDayRing } from "../day-ring.js";
 import { toKey, todayKey, formatDayLong, formatTime, monthTitle } from "../dates.js";
 import { APPOINTMENT_TYPES, TRIP_STATUS, LEG_LABELS, MANAGER_ROLES, errorMessage } from "../strings.js";
 
@@ -127,7 +128,22 @@ function commentsHtml(occ) {
     </div>`;
 }
 
+// الدايرة لليوم المختار
+function renderRing() {
+  document.getElementById("ring-date").textContent = selected === todayKey() ? `النهارده · ${formatDayLong(selected)}` : formatDayLong(selected);
+  renderDayRing(document.getElementById("day-ring"), {
+    date: selected,
+    families: [{
+      familyId,
+      familyName: session.family.name,
+      children: data.children,
+      occurrences: occurrencesInRange(data.appointments, data.exceptions, selected, selected)
+    }]
+  });
+}
+
 function renderDay() {
+  renderRing();
   dayTitleEl.textContent = formatDayLong(selected);
   addBtn.href = `appointment-form.html?date=${selected}`;
   const list = legsInRange(data.appointments, data.exceptions, selected, selected);

@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0d6efd">
+  <meta name="theme-color" content="#131B2B">
+  <script src="js/theme.js"></script>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -62,6 +63,16 @@
         <option value="declined">اعتذرت عنها</option>
       </select>
     </div>
+
+    <section class="card shadow-sm mb-3 ring-card" aria-labelledby="ring-title">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-2">
+          <h2 class="h5 fw-semibold mb-0" id="ring-title">مين مشغول إمتى</h2>
+          <span class="small text-muted" id="ring-date"></span>
+        </div>
+        <div id="day-ring"></div>
+      </div>
+    </section>
 
     <div id="driver-alert" class="mb-3 d-none"></div>
     <div class="d-grid gap-3" id="driver-list"></div>

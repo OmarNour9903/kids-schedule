@@ -347,3 +347,328 @@ body:has(.sync-banner:not(.d-none)) {
 .whats-new-section + .whats-new-section {
   margin-top: 1.25rem;
 }
+
+/* ===== الوضع الغامق (الأساسي) بألوان السيستم =====
+   #131B2B الخلفية · #2F4A63 الأسطح والحدود · #5B91A3 اللون الأساسي · #CFEAE0 الكلام والإبراز */
+[data-bs-theme="dark"] {
+  --app-navy: #131B2B;
+  --app-slate: #2F4A63;
+  --app-teal: #5B91A3;
+  --app-mint: #CFEAE0;
+  --app-surface: #1A2639;
+  --app-surface-2: #22324A;
+
+  --app-bg: var(--app-navy);
+  --bs-body-bg: var(--app-navy);
+  --bs-body-bg-rgb: 19, 27, 43;
+  --bs-body-color: #E3EFEA;
+  --bs-body-color-rgb: 227, 239, 234;
+  --bs-emphasis-color: #F4FAF8;
+  --bs-heading-color: var(--app-mint);
+  --bs-secondary-color: rgba(207, 234, 224, 0.68);
+  --bs-tertiary-color: rgba(207, 234, 224, 0.45);
+  --bs-secondary-bg: var(--app-surface-2);
+  --bs-tertiary-bg: var(--app-surface-2);
+  --bs-border-color: var(--app-slate);
+  --bs-border-color-translucent: rgba(91, 145, 163, 0.28);
+
+  --bs-primary: var(--app-teal);
+  --bs-primary-rgb: 91, 145, 163;
+  --bs-primary-bg-subtle: rgba(91, 145, 163, 0.18);
+  --bs-primary-border-subtle: rgba(91, 145, 163, 0.5);
+  --bs-primary-text-emphasis: var(--app-mint);
+  --bs-link-color: #8CC3D2;
+  --bs-link-color-rgb: 140, 195, 210;
+  --bs-link-hover-color: var(--app-mint);
+  --bs-link-hover-color-rgb: 207, 234, 224;
+  --bs-focus-ring-color: rgba(91, 145, 163, 0.45);
+}
+
+[data-bs-theme="dark"] .card,
+[data-bs-theme="dark"] .modal-content,
+[data-bs-theme="dark"] .list-group,
+[data-bs-theme="dark"] .dropdown-menu {
+  --bs-card-bg: var(--app-surface);
+  --bs-card-border-color: var(--app-slate);
+  --bs-modal-bg: var(--app-surface);
+  --bs-list-group-bg: var(--app-surface);
+  --bs-list-group-border-color: var(--app-slate);
+  --bs-dropdown-bg: var(--app-surface);
+}
+
+[data-bs-theme="dark"] .card {
+  border: 1px solid var(--app-slate);
+}
+
+[data-bs-theme="dark"] .navbar.bg-primary,
+[data-bs-theme="dark"] .navbar.bg-dark {
+  background-color: var(--app-slate) !important;
+  border-bottom: 1px solid rgba(207, 234, 224, 0.12);
+}
+
+[data-bs-theme="dark"] .navbar.bg-dark {
+  background-color: #0D1320 !important;
+}
+
+[data-bs-theme="dark"] .btn-primary {
+  --bs-btn-color: var(--app-navy);
+  --bs-btn-bg: var(--app-teal);
+  --bs-btn-border-color: var(--app-teal);
+  --bs-btn-hover-color: var(--app-navy);
+  --bs-btn-hover-bg: var(--app-mint);
+  --bs-btn-hover-border-color: var(--app-mint);
+  --bs-btn-active-color: var(--app-navy);
+  --bs-btn-active-bg: var(--app-mint);
+  --bs-btn-active-border-color: var(--app-mint);
+  --bs-btn-disabled-color: var(--app-navy);
+  --bs-btn-disabled-bg: var(--app-teal);
+  --bs-btn-disabled-border-color: var(--app-teal);
+  font-weight: 600;
+}
+
+[data-bs-theme="dark"] .btn-outline-primary {
+  --bs-btn-color: #8CC3D2;
+  --bs-btn-border-color: var(--app-teal);
+  --bs-btn-hover-color: var(--app-navy);
+  --bs-btn-hover-bg: var(--app-teal);
+  --bs-btn-hover-border-color: var(--app-teal);
+  --bs-btn-active-color: var(--app-navy);
+  --bs-btn-active-bg: var(--app-teal);
+  --bs-btn-active-border-color: var(--app-teal);
+}
+
+[data-bs-theme="dark"] .btn-outline-secondary {
+  --bs-btn-color: rgba(207, 234, 224, 0.8);
+  --bs-btn-border-color: var(--app-slate);
+  --bs-btn-hover-color: var(--app-mint);
+  --bs-btn-hover-bg: var(--app-slate);
+  --bs-btn-hover-border-color: var(--app-slate);
+  --bs-btn-disabled-color: rgba(207, 234, 224, 0.5);
+  --bs-btn-disabled-border-color: var(--app-slate);
+}
+
+[data-bs-theme="dark"] .text-bg-primary {
+  color: var(--app-navy) !important;
+  background-color: var(--app-teal) !important;
+}
+
+[data-bs-theme="dark"] .text-bg-light {
+  color: var(--app-mint) !important;
+  background-color: var(--app-slate) !important;
+}
+
+[data-bs-theme="dark"] .text-bg-secondary {
+  color: var(--app-mint) !important;
+  background-color: #3C4F66 !important;
+}
+
+[data-bs-theme="dark"] .text-bg-info {
+  color: var(--app-navy) !important;
+  background-color: var(--app-mint) !important;
+}
+
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select {
+  background-color: var(--app-navy);
+  border-color: var(--app-slate);
+}
+
+[data-bs-theme="dark"] .form-control::placeholder {
+  color: rgba(207, 234, 224, 0.4);
+}
+
+[data-bs-theme="dark"] .calendar-cell {
+  background-color: var(--app-navy);
+}
+
+[data-bs-theme="dark"] .calendar-cell.selected {
+  background-color: var(--app-teal);
+  border-color: var(--app-teal);
+  color: var(--app-navy);
+}
+
+[data-bs-theme="dark"] .calendar-cell.selected .calendar-count {
+  background-color: var(--app-navy);
+  color: var(--app-mint);
+}
+
+[data-bs-theme="dark"] .calendar-cell.today {
+  border-color: var(--app-mint);
+}
+
+[data-bs-theme="dark"] .sync-banner-offline {
+  background-color: var(--app-slate);
+  color: var(--app-mint);
+}
+
+/* زرار تبديل الإضاءة: بيكتب الوضع اللي هيتحول له */
+[data-bs-theme="dark"] .theme-to-dark,
+[data-bs-theme="light"] .theme-to-light {
+  display: none;
+}
+
+/* ===== الدايرة: مين مشغول إمتى ===== */
+:root {
+  --ring-free: #E9EEF3;
+  --ring-free-text: #6C7A89;
+  --ring-label: #131B2B;
+  --ring-hour: #6C7A89;
+  --ring-outline: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] {
+  --ring-free: #22324A;
+  --ring-free-text: rgba(207, 234, 224, 0.55);
+  --ring-label: #131B2B;
+  --ring-hour: rgba(207, 234, 224, 0.6);
+  --ring-outline: #CFEAE0;
+}
+
+.day-ring-layout {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (min-width: 768px) {
+  .day-ring-layout {
+    grid-template-columns: minmax(260px, 340px) 1fr;
+  }
+}
+
+.day-ring-chart {
+  max-width: 340px;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.day-ring {
+  display: block;
+  width: 100%;
+  height: auto;
+  font-family: "Cairo", system-ui, sans-serif;
+}
+
+.ring-seg {
+  cursor: pointer;
+  outline: none;
+}
+
+.ring-seg path {
+  stroke: var(--bs-body-bg);
+  stroke-width: 1.5;
+  transition: opacity 0.15s;
+}
+
+.ring-seg-free path {
+  fill: var(--ring-free);
+}
+
+.ring-seg:hover path,
+.ring-seg:focus-visible path {
+  opacity: 0.85;
+}
+
+.ring-seg.is-selected path,
+.ring-seg:focus-visible path {
+  stroke: var(--ring-outline);
+  stroke-width: 3;
+}
+
+.ring-label {
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--ring-label);
+  pointer-events: none;
+}
+
+.ring-label-free {
+  fill: var(--ring-free-text);
+  font-weight: 600;
+}
+
+.ring-hour {
+  font-size: 10px;
+  fill: var(--ring-hour);
+}
+
+.ring-tick {
+  stroke: var(--ring-hour);
+  stroke-width: 1;
+}
+
+.ring-now {
+  stroke: #E5484D;
+  stroke-width: 3;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.ring-center-big {
+  font-size: 22px;
+  font-weight: 700;
+  fill: var(--bs-heading-color, var(--bs-body-color));
+}
+
+.ring-center-small {
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--bs-body-color);
+}
+
+.ring-center-muted {
+  font-size: 11px;
+  fill: var(--bs-secondary-color);
+}
+
+.ring-details {
+  padding: 0.75rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.75rem;
+  background-color: var(--bs-tertiary-bg);
+  margin-bottom: 0.75rem;
+}
+
+.ring-detail-item + .ring-detail-item {
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--bs-border-color);
+}
+
+.ring-legend-title {
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.ring-legend-family {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--bs-secondary-color);
+  margin-top: 0.35rem;
+}
+
+.ring-legend-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  padding: 0;
+  margin: 0 0 0.25rem;
+  list-style: none;
+  font-size: 0.9rem;
+}
+
+.ring-legend-list li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ring-swatch {
+  width: 0.9rem;
+  height: 0.9rem;
+  flex: none;
+}
+
+.ring-swatch-free rect {
+  fill: var(--ring-free);
+  stroke: var(--bs-border-color);
+}

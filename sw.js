@@ -3,7 +3,7 @@
 // - المكتبات (Bootstrap، Firebase، الخطوط): من النسخة المحفوظة الأول لأن روابطها فيها رقم الإصدار.
 // - بيانات Firebase نفسها مش بتعدي من هنا: Firebase بيخزنها لوحده على الجهاز.
 // لو ضفت صفحة أو ملف جديد: ضيفه في LOCAL وغيّر رقم CACHE.
-const CACHE = "kids-schedule-v5";
+const CACHE = "kids-schedule-v6";
 
 const LOCAL = [
   "./",
@@ -27,6 +27,8 @@ const LOCAL = [
   "icons/icon-maskable-512.png",
   "icons/apple-touch-icon.png",
   "js/admin-nav.js",
+  "js/day-ring.js",
+  "js/theme.js",
   "js/data.js",
   "js/dates.js",
   "js/driver-actions.js",
