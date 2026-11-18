@@ -271,15 +271,6 @@ body {
   min-width: 4.25rem;
 }
 
-.details-map {
-  height: 260px;
-  border-radius: 0.6rem;
-}
-
-.details-map:empty {
-  display: none;
-}
-
 @media (max-width: 575.98px) {
   .calendar-grid {
     gap: 0.2rem;
@@ -351,17 +342,6 @@ body:has(.sync-banner:not(.d-none)) {
   inset-inline: 0.75rem;
   top: 0.75rem;
   z-index: 1090;
-}
-
-.details-map:has(.map-offline) {
-  height: auto;
-}
-
-.map-offline {
-  padding: 1rem;
-  border: 1px dashed var(--bs-border-color);
-  border-radius: 0.6rem;
-  text-align: center;
 }
 
 .whats-new-section + .whats-new-section {

@@ -2,37 +2,8 @@
 // اللوكيشن بيتجاب بلصق لينك المكان أو الإحداثيات من Google Maps.
 // openMapPicker بترجع { name, lat, lng, mapsUrl, save } أو null لو المستخدم رجع.
 // lat/lng/mapsUrl بيبقوا null لو المكان اتحفظ بالاسم بس، أو lat/lng بس null لو اللينك مختصر.
-// createMap وshowPlacesMap لسه مستخدمين في عرض المكان في صفحة الموعد.
 import { escapeHtml } from "./ui.js";
 import { parseLocation } from "./maps-link.js";
-
-function baseLayers() {
-  return {
-    "خريطة": L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-      maxZoom: 20, subdomains: "abcd",
-      attribution: "&copy; OpenStreetMap &copy; CARTO"
-    }),
-    "قمر صناعي": L.layerGroup([
-      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-        maxZoom: 20, maxNativeZoom: 19, attribution: "&copy; Esri"
-      }),
-      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
-        maxZoom: 20, maxNativeZoom: 19
-      })
-    ]),
-    "OpenStreetMap": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19, attribution: "&copy; OpenStreetMap"
-    })
-  };
-}
-
-function createMap(container, options = {}) {
-  const layers = baseLayers();
-  const view = L.map(container, { zoomControl: true, ...options });
-  layers["خريطة"].addTo(view);
-  L.control.layers(layers, null, { position: "topright" }).addTo(view);
-  return view;
-}
 
 let modalEl = null;
 let picked = null;
@@ -211,23 +182,6 @@ export function openMapPicker({ lat, lng, name = "", mapsUrl = null, showSave = 
 
     modal.show();
   });
-}
-
-// خريطة صغيرة للعرض بس
-export function showPlacesMap(container, places) {
-  const valid = places.filter((p) => p && p.lat != null);
-  if (!valid.length) return null;
-  // من غير نت الخريطة مش هتحمّل، فبنكتب ده بدل مساحة فاضية
-  if (!navigator.onLine) {
-    container.innerHTML = '<div class="map-offline small text-muted"><i class="bi bi-wifi-off"></i> الخريطة محتاجة نت. لينكات Google Maps شغالة وبتفتح في أبلكيشن الخرايط.</div>';
-    return null;
-  }
-  container.querySelector(".map-offline")?.remove();
-  const view = createMap(container, { scrollWheelZoom: false });
-  const markers = valid.map((p) => L.marker([p.lat, p.lng]).addTo(view).bindPopup(escapeHtml(p.label || p.name)));
-  if (markers.length === 1) view.setView(markers[0].getLatLng(), 16);
-  else view.fitBounds(L.featureGroup(markers).getBounds().pad(0.3));
-  return view;
 }
 
 // لينك يفتح المكان في Google Maps: اللينك الأصلي لو موجود، غير كده بالإحداثيات.

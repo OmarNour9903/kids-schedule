@@ -41,10 +41,11 @@ export const TRIP_STATUS = {
   declined: { label: "اعتذر السواق", badge: "text-bg-danger" }
 };
 
-// نص الحالة بالأسماء: "مؤكد من أحمد" بدل "مؤكد من السواق"، و"تم استلام يوسف" بدل "استلم الولد".
+// نص الحالة بالأسماء: "مؤكد من أحمد" بدل "مؤكد من السواق"، و"أحمد وصل" بدل "السواق وصل"، و"تم استلام يوسف" بدل "استلم الولد".
 // by: اسم اللي أكد، kids: أسماء الأولاد اللي في الموعد. لو مش موجودين بيرجع النص العام.
 export function statusText(status, { by = "", kids = "" } = {}) {
   if (status === "confirmed" && by) return `مؤكد من ${by}`;
+  if (status === "arrived" && by) return `${by} وصل`;
   if (status === "picked" && kids) return `تم استلام ${kids}`;
   return TRIP_STATUS[status]?.label || status;
 }

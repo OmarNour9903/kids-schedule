@@ -3,7 +3,7 @@
 // - المكتبات (Bootstrap، Firebase، الخطوط): من النسخة المحفوظة الأول لأن روابطها فيها رقم الإصدار.
 // - بيانات Firebase نفسها مش بتعدي من هنا: Firebase بيخزنها لوحده على الجهاز.
 // لو ضفت صفحة أو ملف جديد: ضيفه في LOCAL وغيّر رقم CACHE.
-const CACHE = "kids-schedule-v4";
+const CACHE = "kids-schedule-v5";
 
 const LOCAL = [
   "./",
@@ -61,8 +61,6 @@ const LIBRARIES = [
   "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css",
   "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js",
   "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css",
-  "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css",
-  "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js",
   "https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap",
   "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
   "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js",

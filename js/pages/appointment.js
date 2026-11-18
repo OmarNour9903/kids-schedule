@@ -10,7 +10,7 @@ import { watchFamilyData, childNames, isLegPending, legStatusLabel } from "../da
 import { isPendingDoc } from "../offline.js";
 import { occurrencesInRange, exceptionId, planGroupChange, legsOf } from "../schedule.js";
 import { addDays, daysBetween, formatDayLong, formatTime, weekdayName } from "../dates.js";
-import { showPlacesMap, mapsLink } from "../map-picker.js";
+import { mapsLink } from "../map-picker.js";
 import { actionButtonsHtml, runDriverAction, isAssignedTo } from "../driver-actions.js";
 import { notify } from "../notify.js";
 import { APPOINTMENT_TYPES, EDIT_SCOPES, MANAGER_ROLES, TRIP_STATUS, LEG_LABELS, errorMessage, statusText } from "../strings.js";
@@ -50,8 +50,6 @@ let current = null;
 let currentLegs = [];
 let children = [];
 let groupMembers = [];
-let mapView = null;
-let mapKey = "";
 
 const whoText = () => document.getElementById("details-children").textContent;
 const whenText = () => `${formatDayLong(date)} الساعة ${formatTime(current.data.startTime)}`;
@@ -108,17 +106,6 @@ function renderDetails(appointment, occ) {
 
   card.classList.remove("d-none");
 
-  const newMapKey = JSON.stringify([d.pickup, d.dropoff, d.returnTime ? d.returnPlace : null]);
-  if (newMapKey !== mapKey) {
-    mapKey = newMapKey;
-    if (mapView) mapView.remove();
-    mapView = showPlacesMap(document.getElementById("details-map"), [
-      d.pickup && { ...d.pickup, label: `${d.type === "travel" ? "التحرك" : "الاستلام"}: ${d.pickup.name}` },
-      d.dropoff && { ...d.dropoff, label: `${d.type === "travel" ? "الوجهة" : "التوصيل"}: ${d.dropoff.name}` },
-      d.returnTime && d.returnPlace && d.returnPlace.name !== d.pickup?.name && { ...d.returnPlace, label: `العودة: ${d.returnPlace.name}` }
-    ]);
-  }
-
   actions.classList.toggle("d-none", !canManage);
   editBtn.classList.toggle("d-none", occ.cancelled);
   cancelBtn.classList.toggle("d-none", occ.cancelled);
@@ -159,8 +146,8 @@ function renderStatus(occ) {
   document.getElementById("status-log").innerHTML = log.map((entry) => `
     <li>
       ${entry.leg && currentLegs.length > 1 ? `<span class="badge text-bg-light">${LEG_LABELS[entry.leg]}</span>` : ""}
-      ${entry.status === "confirmed" && entry.byName
-        ? `<span class="fw-semibold">${escapeHtml(statusText("confirmed", { by: entry.byName }))}</span>`
+      ${["confirmed", "arrived"].includes(entry.status) && entry.byName
+        ? `<span class="fw-semibold">${escapeHtml(statusText(entry.status, { by: entry.byName }))}</span>`
         : `<span class="fw-semibold">${escapeHtml(statusText(entry.status, { kids: entry.status === "picked" ? whoText() : "" }))}</span>
       · ${escapeHtml(entry.byName || "")}`} · ${formatStamp(entry.at)}
       ${entry.reason ? `<span class="d-block">${escapeHtml(entry.reason)}</span>` : ""}

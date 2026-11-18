@@ -86,7 +86,7 @@ export async function runDriverAction(session, leg, to, who) {
 
   const text = to === "declined"
     ? `${member.name} اعتذر عن مشوار ${who} (${when}). السبب: ${reason}`
-    : to === "confirmed"
+    : to === "confirmed" || to === "arrived"
       ? `${statusText(to, { by: member.name })}، مشوار ${who} (${when})`
       : `${member.name}: ${statusText(to, { kids: who })}، مشوار ${who} (${when})`;
   await notify(session, { audience: "managers", text, appointmentId: occ.appointment.id, date: occ.date });
