@@ -1,11 +1,11 @@
 // أزرار السواق على كل مشوار (ذهاب أو عودة): تأكيد، اعتذار بسبب، وصلت، استلمت، وصّلته.
 // كل مشوار ليه حالته لوحده، وكل خطوة بتتسجل بوقتها في statusLog، وبتبعت إشعار لأولياء الأمر.
 import { db, doc, setDoc, arrayUnion, serverTimestamp } from "./firebase.js";
-import { confirmDialog, promptDialog } from "./ui.js";
+import { confirmDialog, promptDialog, escapeHtml } from "./ui.js";
 import { notify } from "./notify.js";
 import { exceptionId } from "./schedule.js";
 import { formatDayLong, formatTime } from "./dates.js";
-import { TRIP_STATUS, LEG_LABELS } from "./strings.js";
+import { LEG_LABELS, statusText } from "./strings.js";
 
 const NEXT = {
   scheduled: [{ to: "confirmed", label: "تأكيد", icon: "bi-check2", style: "btn-primary" }],
@@ -37,11 +37,12 @@ export function isAssignedTo(leg, uid) {
   return !leg.driverId || leg.driverId === uid;
 }
 
-export function actionButtonsHtml(leg) {
+// who: أسماء الأولاد، عشان الزرار يبقى "استلمت يوسف" بدل "استلمت الولد"
+export function actionButtonsHtml(leg, who = "") {
   return driverActionsFor(leg).map((a) => `
     <button type="button" class="btn btn-sm ${a.style}" data-driver-action="${a.to}" data-leg="${leg.leg}"
       data-id="${encodeURIComponent(leg.occ.appointment.id)}" data-date="${leg.occ.date}">
-      <i class="bi ${a.icon}"></i> ${a.label}
+      <i class="bi ${a.icon}"></i> ${a.to === "picked" && who ? `استلمت ${escapeHtml(who)}` : a.label}
     </button>`).join("");
 }
 
@@ -63,9 +64,10 @@ export async function runDriverAction(session, leg, to, who) {
     });
     if (!reason) return false;
   } else {
+    const label = statusText(to, { kids: who });
     const confirmed = await confirmDialog({
-      title: `${TRIP_STATUS[to].label} (${legName})`,
-      message: `${TRIP_STATUS[to].label}: ${who}، ${when}؟`,
+      title: `${label} (${legName})`,
+      message: `${label}: ${who}، ${when}؟`,
       confirmText: "تأكيد"
     });
     if (!confirmed) return false;
@@ -84,7 +86,9 @@ export async function runDriverAction(session, leg, to, who) {
 
   const text = to === "declined"
     ? `${member.name} اعتذر عن مشوار ${who} (${when}). السبب: ${reason}`
-    : `${member.name}: ${TRIP_STATUS[to].label}، مشوار ${who} (${when})`;
+    : to === "confirmed"
+      ? `${statusText(to, { by: member.name })}، مشوار ${who} (${when})`
+      : `${member.name}: ${statusText(to, { kids: who })}، مشوار ${who} (${when})`;
   await notify(session, { audience: "managers", text, appointmentId: occ.appointment.id, date: occ.date });
   return true;
 }

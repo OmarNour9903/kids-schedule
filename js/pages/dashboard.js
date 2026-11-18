@@ -3,7 +3,7 @@ import { db, collection, onSnapshot } from "../firebase.js";
 import { requireSession } from "../session.js";
 import { renderNav } from "../nav.js";
 import { escapeHtml, showAlert, revealPage, pendingBadge } from "../ui.js";
-import { watchFamilyData, childNames, isLegPending } from "../data.js";
+import { watchFamilyData, childNames, isLegPending, legStatusLabel } from "../data.js";
 import { offlineRangeNote } from "../offline.js";
 import { legsInRange, exceptionId } from "../schedule.js";
 import { toKey, todayKey, formatDayLong, formatTime, monthTitle } from "../dates.js";
@@ -91,7 +91,7 @@ function legItem(leg) {
   const cancelledBadge = occ.cancelled ? '<span class="badge text-bg-secondary">ملغي</span>' : "";
   const pending = isLegPending(leg, data) ? pendingBadge() : "";
   const statusBadge = !occ.cancelled && leg.status !== "scheduled"
-    ? `<span class="badge ${TRIP_STATUS[leg.status].badge}">${TRIP_STATUS[leg.status].label}</span>`
+    ? `<span class="badge ${TRIP_STATUS[leg.status].badge}">${escapeHtml(legStatusLabel(leg, data))}</span>`
     : "";
 
   return `

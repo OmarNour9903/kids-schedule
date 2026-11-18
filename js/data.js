@@ -2,6 +2,7 @@
 import { db, collection, onSnapshot, getDocs } from "./firebase.js";
 import { exceptionId } from "./schedule.js";
 import { isPendingDoc } from "./offline.js";
+import { statusText } from "./strings.js";
 
 const ref = (familyId, name) => collection(db, "families", familyId, name);
 const toList = (snapshot) => snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -67,4 +68,21 @@ export function isLegPending(leg, state) {
 export function childNames(childIds, children) {
   const byId = new Map(children.map((c) => [c.id, c.name]));
   return (childIds || []).map((id) => byId.get(id) || "ولد اتمسح").join(" و");
+}
+
+// اسم اللي عمل آخر خطوة بالحالة دي على المشوار ده، من statusLog
+// (التسجيلات القديمة اللي من غير leg بتتحسب على الذهاب)
+function actorName(leg, status) {
+  const entry = (leg.occ.exception?.statusLog || [])
+    .filter((e) => (e.leg || "go") === leg.leg && e.status === status)
+    .reduce((a, b) => (!a || b.at > a.at ? b : a), null);
+  return entry?.byName || "";
+}
+
+// نص حالة المشوار بالأسماء: "مؤكد من أحمد"، "تم استلام يوسف"
+export function legStatusLabel(leg, state) {
+  return statusText(leg.status, {
+    by: actorName(leg, leg.status),
+    kids: (leg.occ.data.childIds || []).length ? childNames(leg.occ.data.childIds, state.children || []) : ""
+  });
 }

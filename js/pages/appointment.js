@@ -6,14 +6,14 @@ import {
 import { requireSession } from "../session.js";
 import { renderNav } from "../nav.js";
 import { escapeHtml, showAlert, hideAlert, confirmDialog, choiceDialog, revealPage, pendingBadge } from "../ui.js";
-import { watchFamilyData, childNames, isLegPending } from "../data.js";
+import { watchFamilyData, childNames, isLegPending, legStatusLabel } from "../data.js";
 import { isPendingDoc } from "../offline.js";
 import { occurrencesInRange, exceptionId, planGroupChange, legsOf } from "../schedule.js";
 import { addDays, daysBetween, formatDayLong, formatTime, weekdayName } from "../dates.js";
 import { showPlacesMap, mapsLink } from "../map-picker.js";
 import { actionButtonsHtml, runDriverAction, isAssignedTo } from "../driver-actions.js";
 import { notify } from "../notify.js";
-import { APPOINTMENT_TYPES, EDIT_SCOPES, MANAGER_ROLES, TRIP_STATUS, LEG_LABELS, errorMessage } from "../strings.js";
+import { APPOINTMENT_TYPES, EDIT_SCOPES, MANAGER_ROLES, TRIP_STATUS, LEG_LABELS, errorMessage, statusText } from "../strings.js";
 
 const session = await requireSession();
 renderNav(session);
@@ -135,12 +135,12 @@ function legStatusHtml(leg) {
     <div class="leg-status">
       <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
         <span class="fw-semibold">${title} <bdi>${formatTime(leg.time)}</bdi></span>
-        <span class="d-flex flex-wrap gap-1">${isLegPending(leg, familyState) ? pendingBadge() : ""}<span class="badge ${status.badge}">${status.label}</span></span>
+        <span class="d-flex flex-wrap gap-1">${isLegPending(leg, familyState) ? pendingBadge() : ""}<span class="badge ${status.badge}">${escapeHtml(legStatusLabel(leg, familyState))}</span></span>
       </div>
       <div class="small text-muted mb-2">${escapeHtml(leg.from?.name || "")} ← ${escapeHtml(leg.to?.name || "")}${leg.driverId ? ` · السواق: ${escapeHtml(driverName(leg.driverId))}` : ""}</div>
       ${declined ? `<div class="alert alert-danger py-2 mb-2"><strong>السواق اعتذر.</strong> السبب: ${escapeHtml(leg.declineReason || "-")}${canManage ? "<br>تقدر تعدّل الموعد، أو تلغيه، أو تعيّن سواق تاني للمشوار ده." : ""}</div>` : ""}
       <div class="d-flex flex-wrap gap-2">
-        ${isDriver && isAssignedTo(leg, user.uid) ? actionButtonsHtml(leg) : ""}
+        ${isDriver && isAssignedTo(leg, user.uid) ? actionButtonsHtml(leg, whoText()) : ""}
         ${canAssign ? `<button type="button" class="btn btn-sm btn-outline-primary" data-assign-leg="${leg.leg}"><i class="bi bi-person-gear"></i> تعيين سواق للمشوار ده</button>` : ""}
       </div>
     </div>`;
@@ -159,8 +159,10 @@ function renderStatus(occ) {
   document.getElementById("status-log").innerHTML = log.map((entry) => `
     <li>
       ${entry.leg && currentLegs.length > 1 ? `<span class="badge text-bg-light">${LEG_LABELS[entry.leg]}</span>` : ""}
-      <span class="fw-semibold">${TRIP_STATUS[entry.status]?.label || entry.status}</span>
-      · ${escapeHtml(entry.byName || "")} · ${formatStamp(entry.at)}
+      ${entry.status === "confirmed" && entry.byName
+        ? `<span class="fw-semibold">${escapeHtml(statusText("confirmed", { by: entry.byName }))}</span>`
+        : `<span class="fw-semibold">${escapeHtml(statusText(entry.status, { kids: entry.status === "picked" ? whoText() : "" }))}</span>
+      · ${escapeHtml(entry.byName || "")}`} · ${formatStamp(entry.at)}
       ${entry.reason ? `<span class="d-block">${escapeHtml(entry.reason)}</span>` : ""}
     </li>`).join("");
 }
