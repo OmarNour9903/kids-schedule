@@ -2,7 +2,7 @@
 import { db, collection, query, where, onSnapshot } from "./firebase.js";
 import { escapeHtml } from "./ui.js";
 import { ROLE_LABELS } from "./strings.js";
-import { logout } from "./session.js";
+import { logout, switchFamily } from "./session.js";
 import { showWhatsNew } from "./whats-new.js";
 
 export function renderNav(session) {
@@ -10,6 +10,9 @@ export function renderNav(session) {
   const { member, family, user } = session;
   const canManageMembers = ["owner", "parent"].includes(member.role);
   const isDriver = member.role === "driver";
+  const families = session.families || [];
+  // سواق في أي أسرة من أسره: صفحة "مشاويري" بتجمع مشاوير كل الأسر
+  const drivesAny = families.some((f) => f.member.role === "driver");
   const current = location.pathname.split("/").pop() || "dashboard.html";
 
   const link = (href, label) => {
@@ -37,12 +40,27 @@ export function renderNav(session) {
       </div>
       <div class="collapse navbar-collapse" id="main-nav">
         <ul class="navbar-nav me-auto">
-          ${isDriver ? link("driver.html", "مشاويري") : ""}
+          ${drivesAny ? link("driver.html", "مشاويري") : ""}
           ${link(isDriver ? "dashboard.html?calendar=1" : "dashboard.html", "التقويم")}
           ${canManageMembers ? link("children.html", "الأولاد") : ""}
           ${canManageMembers ? link("places.html", "الأماكن") : ""}
           ${canManageMembers ? link("members.html", "الأعضاء") : ""}
           ${session.isAdmin ? link("admin.html", "لوحة التحكم") : ""}
+          ${families.length > 1 ? `
+          <li class="nav-item dropdown">
+            <button type="button" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-arrow-left-right"></i> تغيير الأسرة
+            </button>
+            <ul class="dropdown-menu">
+              ${families.map((f) => `
+                <li>
+                  <button type="button" class="dropdown-item d-flex justify-content-between gap-3${f.id === session.familyId ? " active" : ""}" data-switch-family="${escapeHtml(f.id)}">
+                    <span>${escapeHtml(f.family.name)}</span>
+                    <span class="small opacity-75">${ROLE_LABELS[f.member.role]}</span>
+                  </button>
+                </li>`).join("")}
+            </ul>
+          </li>` : ""}
           <li class="nav-item">
             <button type="button" class="nav-link install-app-btn" data-install-app>
               <i class="bi bi-download"></i> تحميل الأبلكيشن
@@ -60,6 +78,9 @@ export function renderNav(session) {
     </div>`;
 
   document.getElementById("logout-btn").addEventListener("click", logout);
+  nav.querySelectorAll("[data-switch-family]").forEach((button) => {
+    button.addEventListener("click", () => switchFamily(session, button.dataset.switchFamily));
+  });
 
   // تنبيه التحديثات الجديدة: مرة واحدة لكل مستخدم
   showWhatsNew(session);

@@ -56,7 +56,8 @@ list.addEventListener("click", async (event) => {
     // حتى لو التعليم كمقروء فشل، نفتح الموعد
   }
   if (n.appointmentId && n.date) {
-    location.href = `appointment.html?id=${encodeURIComponent(n.appointmentId)}&date=${n.date}`;
+    const family = n.familyId ? `&family=${encodeURIComponent(n.familyId)}` : "";
+    location.href = `appointment.html?id=${encodeURIComponent(n.appointmentId)}&date=${n.date}${family}`;
   }
 });
 

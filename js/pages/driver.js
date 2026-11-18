@@ -1,4 +1,6 @@
-// شاشة السواق: المشاوير حسب الفلتر (الجاية افتراضياً، يوم، الأسبوع، اللي فاتت) والحالة، وأزرار الحالة لكل مشوار
+// شاشة السواق: مشاوير كل الأسر اللي هو سواق فيها في جدول واحد،
+// بفلتر للأسرة والفترة (الجاية افتراضياً، يوم، الأسبوع، اللي فاتت) والحالة، وأزرار الحالة لكل مشوار،
+// وتنبيه لو فيه مشوارين في نفس المعاد (حتى لو من أسرتين مختلفتين)
 import { requireSession } from "../session.js";
 import { renderNav } from "../nav.js";
 import { escapeHtml, showAlert, hideAlert, revealPage, pendingBadge } from "../ui.js";
@@ -11,8 +13,20 @@ import { actionButtonsHtml, runDriverAction, isAssignedTo } from "../driver-acti
 import { TRIP_STATUS, APPOINTMENT_TYPES, LEG_LABELS, errorMessage } from "../strings.js";
 
 const session = await requireSession();
+const { user } = session;
+
+// الأسر اللي المستخدم سواق فيها
+const driverFamilies = session.families.filter((f) => f.member.role === "driver");
+if (!driverFamilies.length) {
+  location.replace("dashboard.html");
+  await new Promise(() => {});
+}
 renderNav(session);
-const { familyId, user } = session;
+const multiFamily = driverFamilies.length > 1;
+const familyById = new Map(driverFamilies.map((f) => [f.id, f]));
+
+// السيشن بتاع أسرة معينة: الأزرار والإشعارات بتتسجل في الأسرة بتاعة المشوار وباسم السواق فيها
+const sessionFor = (familyId) => ({ ...session, familyId, member: familyById.get(familyId).member, family: familyById.get(familyId).family });
 
 const listEl = document.getElementById("driver-list");
 const titleEl = document.getElementById("driver-title");
@@ -23,6 +37,7 @@ const alertBox = document.getElementById("driver-alert");
 const prevBtn = document.getElementById("prev-day");
 const nextBtn = document.getElementById("next-day");
 const statusSelect = document.getElementById("status-filter");
+const familySelect = document.getElementById("family-filter");
 
 // الفلتر بيتحفظ على الجهاز، ولينك فيه ?date= بيفتح اليوم ده على طول
 const FILTER_KEY = "driver-filters";
@@ -41,7 +56,7 @@ function loadFilters() {
 
 function saveFilters() {
   try {
-    localStorage.setItem(FILTER_KEY, JSON.stringify({ range, status: statusFilter }));
+    localStorage.setItem(FILTER_KEY, JSON.stringify({ range, status: statusFilter, family: familyFilter }));
   } catch (error) {
     // التخزين مش متاح: الفلتر هيرجع للافتراضي المرة الجاية بس
   }
@@ -52,7 +67,10 @@ const dateParam = new URLSearchParams(location.search).get("date") || "";
 let day = /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : todayKey();
 let range = dateParam ? "day" : (RANGES.includes(saved.range) ? saved.range : "upcoming");
 let statusFilter = STATUS_FILTERS.includes(saved.status) ? saved.status : "all";
-let data = null;
+let familyFilter = familyById.has(saved.family) ? saved.family : "all";
+// بيانات كل أسرة: familyId => state
+const states = new Map();
+let loaded = false;
 let current = [];
 
 // اسم المكان + زرار يفتح اللوكيشن على Google Maps، أو زرار مقفول لو ولي الأمر ماحطش لوكيشن
@@ -76,8 +94,9 @@ function placeLine(icon, label, place) {
 }
 
 // كارت لكل مشوار: الذهاب لوحده والعودة لوحدها، وكل واحد ليه حالته وأزراره
-function cardHtml(leg) {
+function cardHtml(leg, conflict) {
   const { occ } = leg;
+  const data = states.get(leg.familyId);
   const d = occ.data;
   const travel = d.type === "travel";
   const status = occ.cancelled
@@ -106,6 +125,8 @@ function cardHtml(leg) {
             <span class="badge ${status.badge}">${escapeHtml(status.label)}</span>
           </span>
         </div>
+        ${multiFamily ? `<div><span class="badge text-bg-light border"><i class="bi bi-house-heart"></i> ${escapeHtml(familyById.get(leg.familyId).family.name)}</span></div>` : ""}
+        ${conflict ? '<div class="alert alert-warning py-1 px-2 small mb-0"><i class="bi bi-exclamation-triangle"></i> فيه مشوار تاني في نفس المعاد</div>' : ""}
         <div class="fw-semibold">${escapeHtml(childNames(d.childIds, data.children))}${d.type === "extra" ? ` <span class="badge text-bg-warning">${APPOINTMENT_TYPES.extra}</span>` : ""}</div>
         ${travelLine}
         ${placeLine("bi-house", "استلام من:", leg.from)}
@@ -114,7 +135,7 @@ function cardHtml(leg) {
         ${reason}
         <div class="d-flex flex-wrap gap-2 mt-1">
           ${actionButtonsHtml(leg, childNames(d.childIds, data.children))}
-          <a class="btn btn-sm btn-outline-secondary" href="appointment.html?id=${encodeURIComponent(occ.appointment.id)}&date=${occ.date}">التفاصيل والتعليقات</a>
+          <a class="btn btn-sm btn-outline-secondary" href="appointment.html?id=${encodeURIComponent(occ.appointment.id)}&date=${occ.date}&family=${encodeURIComponent(leg.familyId)}">التفاصيل والتعليقات</a>
         </div>
       </div>
     </article>`;
@@ -168,9 +189,24 @@ function render() {
   todayBtn.classList.toggle("d-none", !isDay || isToday);
   document.querySelectorAll('input[name="range"]').forEach((input) => { input.checked = input.value === range; });
   statusSelect.value = statusFilter;
+  familySelect.value = familyFilter;
 
-  let legs = legsInRange(data.appointments, data.exceptions, from, to)
+  const allLegs = [...states.entries()]
+    .flatMap(([familyId, data]) => legsInRange(data.appointments, data.exceptions, from, to)
+      .map((leg) => Object.assign(leg, { familyId })))
     .filter((leg) => isAssignedTo(leg, user.uid))
+    .sort((a, b) => a.occ.date.localeCompare(b.occ.date) || a.time.localeCompare(b.time));
+
+  // التعارض: أكتر من مشوار شغال في نفس اليوم ونفس المعاد، من أي أسرة
+  const slots = new Map();
+  allLegs.filter((leg) => !leg.occ.cancelled && leg.status !== "declined").forEach((leg) => {
+    const key = `${leg.occ.date} ${leg.time}`;
+    slots.set(key, (slots.get(key) || 0) + 1);
+  });
+  const hasConflict = (leg) => !leg.occ.cancelled && leg.status !== "declined" && slots.get(`${leg.occ.date} ${leg.time}`) > 1;
+
+  let legs = allLegs
+    .filter((leg) => familyFilter === "all" || leg.familyId === familyFilter)
     .filter(matchesStatus);
   // "الجاية": اللي خلص أو اتلغى مش محتاجه
   if (range === "upcoming") legs = legs.filter((leg) => !leg.occ.cancelled && leg.status !== "done");
@@ -186,7 +222,7 @@ function render() {
       lastDate = leg.occ.date;
       html += dayHeading(lastDate);
     }
-    html += cardHtml(leg);
+    html += cardHtml(leg, hasConflict(leg));
   });
   const emptyText = statusFilter === "all" ? EMPTY_TEXT[range] : "مفيش مشاوير بالحالة دي في الفترة دي.";
   listEl.innerHTML = (note ? `<div class="alert alert-warning small mb-0">${note}</div>` : "")
@@ -194,7 +230,7 @@ function render() {
 }
 
 // النت قطع أو رجع: نحدّث تنبيه الأيام المضمونة أوفلاين
-["online", "offline"].forEach((name) => window.addEventListener(name, () => { if (data) render(); }));
+["online", "offline"].forEach((name) => window.addEventListener(name, () => { if (loaded) render(); }));
 
 function goTo(newDay) {
   day = newDay;
@@ -207,7 +243,7 @@ function setRange(newRange) {
   // اللينك فيه اليوم بس لما الفلتر "يوم"
   history.replaceState(null, "", range === "day" ? `?date=${day}` : location.pathname);
   saveFilters();
-  if (data) render();
+  if (loaded) render();
 }
 
 document.querySelectorAll('input[name="range"]').forEach((input) => {
@@ -217,7 +253,17 @@ document.querySelectorAll('input[name="range"]').forEach((input) => {
 statusSelect.addEventListener("change", () => {
   statusFilter = statusSelect.value;
   saveFilters();
-  if (data) render();
+  if (loaded) render();
+});
+
+// فلتر الأسرة بيظهر بس لو السواق شغال مع أكتر من أسرة
+familySelect.innerHTML = '<option value="all">كل الأسر</option>'
+  + driverFamilies.map((f) => `<option value="${escapeHtml(f.id)}">${escapeHtml(f.family.name)}</option>`).join("");
+familySelect.classList.toggle("d-none", !multiFamily);
+familySelect.addEventListener("change", () => {
+  familyFilter = familySelect.value;
+  saveFilters();
+  if (loaded) render();
 });
 
 document.getElementById("prev-day").addEventListener("click", () => goTo(addDays(day, -1)));
@@ -233,19 +279,25 @@ listEl.addEventListener("click", async (event) => {
   hideAlert(alertBox);
   button.disabled = true;
   try {
-    await runDriverAction(session, leg, button.dataset.driverAction, childNames(leg.occ.data.childIds, data.children));
+    await runDriverAction(sessionFor(leg.familyId), leg, button.dataset.driverAction, childNames(leg.occ.data.childIds, states.get(leg.familyId).children));
   } catch (error) {
     showAlert(alertBox, errorMessage(error));
   }
   button.disabled = false;
 });
 
-watchFamilyData(familyId, (state) => {
-  const first = !data;
-  data = state;
-  render();
-  if (first) revealPage();
-}, (error) => {
-  showAlert(alertBox, errorMessage(error));
-  revealPage();
+// متابعة لحظية لكل أسرة، والصفحة بتظهر لما كل الأسر تتحمل
+driverFamilies.forEach((f) => {
+  watchFamilyData(f.id, (state) => {
+    states.set(f.id, state);
+    if (states.size < driverFamilies.length) return;
+    render();
+    if (!loaded) {
+      loaded = true;
+      revealPage();
+    }
+  }, (error) => {
+    showAlert(alertBox, errorMessage(error));
+    revealPage();
+  });
 });

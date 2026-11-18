@@ -3,14 +3,15 @@
 import { db, collection, doc, getDocs, writeBatch, serverTimestamp } from "./firebase.js";
 import { MANAGER_ROLES } from "./strings.js";
 
-let membersCache = null;
+// لكل أسرة لوحدها، عشان السواق اللي في أكتر من أسرة الإشعار يروح لأعضاء الأسرة الصح
+const membersCache = new Map();
 
 async function activeMembers(familyId) {
-  if (!membersCache) {
+  if (!membersCache.has(familyId)) {
     const snapshot = await getDocs(collection(db, "families", familyId, "members"));
-    membersCache = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })).filter((m) => m.status === "active");
+    membersCache.set(familyId, snapshot.docs.map((d) => ({ id: d.id, ...d.data() })).filter((m) => m.status === "active"));
   }
-  return membersCache;
+  return membersCache.get(familyId);
 }
 
 // audience: "all" = كل الأعضاء، "managers" = أولياء الأمر بس، أو array فيها uids معينة

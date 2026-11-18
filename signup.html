@@ -31,6 +31,18 @@
 
         <div id="signup-alert" class="mb-3 d-none"></div>
 
+        <!-- عنده حساب ومسجل دخول: ينضم للأسرة بحسابه الحالي (مثلاً سواق شغال مع أسرة تانية) -->
+        <div id="join-existing" class="d-none">
+          <p class="mb-3" id="join-existing-text"></p>
+          <button type="button" class="btn btn-primary w-100" id="join-submit">انضم بحسابي</button>
+          <button type="button" class="btn btn-link btn-sm w-100 mt-2" id="join-logout">مش ده حسابي، خروج</button>
+        </div>
+
+        <div id="have-account" class="alert alert-info small d-none">
+          عندك حساب قبل كده (مثلاً شغال مع أسرة تانية على السيستم)؟
+          <a href="#" id="login-with-invite" class="alert-link">سجّل دخول بيه</a> وهتنضم للأسرة دي بنفس الحساب.
+        </div>
+
         <form id="signup-form" class="d-none" novalidate>
           <div class="mb-3 d-none" id="family-name-field">
             <label for="familyName" class="form-label">اسم العيلة</label>

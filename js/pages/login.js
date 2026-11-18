@@ -20,6 +20,11 @@ const URL_ERRORS = {
 const urlError = new URLSearchParams(location.search).get("error");
 if (URL_ERRORS[urlError]) showAlert(alertBox, URL_ERRORS[urlError], "warning");
 
+// جاي من لينك دعوة وعنده حساب: بعد الدخول يرجع لصفحة الدعوة عشان ينضم بنفس الحساب
+const inviteCode = new URLSearchParams(location.search).get("invite");
+const afterLogin = inviteCode ? `signup.html?invite=${encodeURIComponent(inviteCode)}` : "dashboard.html";
+if (inviteCode && !urlError) showAlert(alertBox, "سجّل دخول بحسابك عشان تكمّل الانضمام للأسرة.", "info");
+
 if (!isConfigured) {
   showAlert(alertBox, "لسه إعدادات Firebase مش متحطة في js/firebase-config.js", "warning");
 }
@@ -27,7 +32,7 @@ if (!isConfigured) {
 // لو داخل قبل كده، يروح على الرئيسية على طول
 const unsubscribe = onAuthStateChanged(auth, (user) => {
   unsubscribe();
-  if (user && !urlError) location.replace("dashboard.html");
+  if (user && !urlError) location.replace(afterLogin);
 });
 
 form.addEventListener("submit", async (event) => {
@@ -41,7 +46,7 @@ form.addEventListener("submit", async (event) => {
   setLoading(submitBtn, true);
   try {
     await signInWithEmailAndPassword(auth, form.email.value.trim(), form.password.value);
-    location.replace("dashboard.html");
+    location.replace(afterLogin);
   } catch (error) {
     showAlert(alertBox, errorMessage(error));
     setLoading(submitBtn, false);
